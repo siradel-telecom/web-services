@@ -1,0 +1,5 @@
+transmitter id;transmitter name;transmitter easting;transmitter northing;transmitter height;azimuth;downtilt;frequency;antenna;propagation model;calculation resolution;calculation radius;emitting power;comments
+1;tx1;449397;5413122;10;0;1;900;Dir_H68_V7_tilt4_PolV_19dBi;model1;20;1000;0;
+2;tx2;449397;5413122;10;120;2;900;Dir_H68_V7_tilt4_PolV_19dBi;model1;20;1000;0;
+3;tx3;448339;5413636;10;10;3;900;Dir_H68_V7_tilt4_PolV_19dBi;model1;20;1000;0;
+4;tx4;448774;5412612;10;20;4;900;Dir_H68_V7_tilt4_PolV_19dBi;model1;20;1000;0;

@@ -1,0 +1,84 @@
+{
+  "serverUrl": "http://VOLCANOWEBSERVER:PORT/",
+  "authentication": {
+    "required": false,
+    "publicPrediction": false,
+    "url": "URL",
+    "clientId": "CLIENTID",
+    "clientSecret": "CLIENTSECRET",
+    "username": "USERNAME",
+    "password": "PASSWORD"
+  },
+  "mapdata": [
+    {
+      "name": "parisMapdataSample",
+      "layers": [
+        {
+          "path": "/sharedData/MapData/Software/France/Paris/Sample/DTM/index.xml",
+          "layerType": "DTM",
+          "layerFormat": "BIL"
+        },
+        {
+          "path": "/sharedData/MapData/Software/France/Paris/Sample/Vectors/index.xml",
+          "layerType": "VECTOR",
+          "layerFormat": "SHAPE"
+        }
+      ],
+      "epsgSrid": 32631
+    }
+  ],
+  "session": {
+    "name": "session_sample_Paris",
+    "description": "Paris sample description, how to run P2A VWeb sample with python client"
+  },
+  "models": [
+    {
+      "name": "model1",
+      "description": "test",
+      "vxfFilePath": "./Volcano_Urban_DP.vxf",
+      "mapdataName": "parisMapdataSample"
+    }
+  ],
+  "predictionSettings": {
+    "networkFile": "./hw_network_sample.csv",
+    "predictionResultType": [
+      "RECEIVED_POWER"
+    ],
+    "receptionHeights": [
+      1.5
+    ],
+    "receptionHeightReference": "GROUND",
+    "isotropic": false,
+    "force": false
+  },
+  "antennas": [
+    {
+      "name": "Dir_H68_V7_tilt4_PolV_19dBi",
+      "antennaFile": "./Dir_H68_V7_tilt4_PolV_19dBi.xml"
+    }
+  ],
+  "predictionGroupFilteringZone": {
+    "coordinates": {
+      "xmin": null,
+      "xmax": null,
+      "ymin": null,
+      "ymax": null
+    }
+  },
+  "network": {
+    "computationType": "Custom",
+    "computationResultType": [
+      "BEST_SERVER",
+      "DL_BEST_SIGNAL"
+    ],
+    "computationZone": {
+      "xmin": null,
+      "xmax": null,
+      "ymin": null,
+      "ymax": null,
+      "epsgCode": 4326
+    },
+    "resolution": 5
+  },
+  "outputPath": "./ScriptResult/"
+}
