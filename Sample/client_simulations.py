@@ -23,7 +23,6 @@ import requests
 import sys
 import time
 import uuid
-from copy import deepcopy
 from enum import Enum
 from pathlib import Path
 from typing import Union, List, Optional, cast, Any
@@ -181,16 +180,6 @@ def get_script_information(logger: logging.Logger) -> None:
     logger.info(f"* Date: {LAST_DATE_MODIF}")
     logger.info("* Editor: SIRADEL-ENGIE")
 
-
-def get_content_of_json_file(json_file: str) -> dict:
-    """
-    @summary: Transform the json content of a json file to dictionary
-    @param json_file: {str} a json file path
-    @return: {dict} dictionary of json content datas
-    """
-    with open(json_file, encoding="utf-8") as json_data:
-        data_dict = json.load(json_data)
-    return data_dict
 
 
 def get_computation_type(data_dict: dict) -> str:
@@ -424,21 +413,6 @@ def create_gobs(gob_list: list, antenna_dict: dict, authentication_data: Optiona
                 sys.exit(errno.EINVAL)
         created_gob_dict[gob[NAME]] = result["uuid"]
     return created_gob_dict
-
-
-def delete_temp_dir(authentication_data: Optional[dict], server: str,
-                    logger: logging.Logger) -> None:
-    """
-    @summary: Delete volcano temporary folders
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    """
-    res = call_request("DELETE", f"{server}predictions/volcanoTempDirectory",
-                       authentication_data, logger)
-    if res.status_code != 200:
-        result = res.json()
-        logger.error(ERROR_LOG, get_error_message(result))
 
 
 def delete_scenarii_dir(authentication_data: Optional[dict], server: str,
@@ -799,7 +773,7 @@ def create_post_processing_request(json_input_file: dict, logger: logging.Logger
 
     if "network" in json_input_file.keys():
         if get_prediction_type(json_input_file["predictionSettings"]) == "POINT":
-            LOGGER.warning("Post processing calculation ignored: "
+            logger.warning("Post processing calculation ignored: "
                            "All predictions must be of type AREA")
         else:
             postprocessing_settings = json_input_file["network"]
@@ -895,7 +869,6 @@ def pull_simulation_status(simulation_uuid: uuid.UUID,
     @param server: {str} server url
     @param logger: {logging.Logger} used to trace output log
     """
-    retry = True
     while True:
         time.sleep(5)
         res = call_request("GET", f"{server}simulations/{str(simulation_uuid)}/status",
@@ -903,11 +876,8 @@ def pull_simulation_status(simulation_uuid: uuid.UUID,
         response = res.json()
         if res.status_code != 404:
             result_code = handle_pull_simulation_status_response(
-                simulation_uuid, response, retry, authentication_data, server, logger)
-            if result_code == 2:
-                # One error occurred, retry once
-                retry = False
-            elif result_code == 0:
+                simulation_uuid, response, logger)
+            if result_code == 0:
                 # Status is done, break the loop
                 break
         else:
@@ -916,16 +886,12 @@ def pull_simulation_status(simulation_uuid: uuid.UUID,
 
 
 def handle_pull_simulation_status_response(simulation_uuid: uuid.UUID,
-                                           response: dict, retry: bool,
-                                           authentication_data: Optional[dict], server: str,
+                                           response: dict,
                                            logger: logging.Logger) -> int:
     """
     @summary: Handle the response returned by simulation status api call
     @param simulation_uuid: {uuid.UUID} uuid of the simulation
     @param response: {dict} response of api call
-    @param retry: {bool} True if you have to retry the call, False else
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
     @param logger: {logging.Logger} used to trace output log
     @return: {int} 0 if success, 1 if waiting and 2 if retry
     """
@@ -1018,60 +984,6 @@ def handle_pull_post_processing_status_response(post_processing_uuid: uuid.UUID,
     return 1
 
 
-def download_post_processing_results(output_path: str, file_name: str,
-                                     post_processing_uuid: uuid.UUID,
-                                     authentication_data: Optional[dict], server: str,
-                                     logger: logging.Logger) -> None:
-    """
-    @summary: Download the post processing results files
-    @param output_path: {str} the path where to save the results files
-    @param file_name: {str} the file name
-    @param post_processing_uuid: {uuid.UUID} uuid of the post processing
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    """
-    logger.info("Download post processing results %s", post_processing_uuid)
-    # Patch to slow down the script during the writing on the database
-    time.sleep(1)
-    i = 3
-    results = {}
-    while i > 0:
-        res = call_request("GET", f"{server}postprocessings/{str(post_processing_uuid)}/results",
-                           authentication_data, logger)
-        results = res.json()
-        if res.status_code in (404, 400):
-            logger.error("%s %s", ERROR_POST_PROCESSING, get_error_message(results))
-            sys.exit(errno.EINVAL)
-        if len(results) > 0:
-            break
-        i = i - 1
-
-    path = f"{output_path}/{file_name}/postProcessingResult/"
-    create_directory(path)
-
-    for result in results:
-        # Check from result fileName if it contains subfolder (e.g. cells/)
-        split_name = result["fileName"].rsplit("/", 1)
-        folder_path = ''
-        if len(split_name) == 2:
-            folder_path = split_name[0]
-            name = split_name[1]
-        else:
-            name = split_name[0]
-        final_folder_path = os.path.join(path, folder_path)
-
-        current_tiff = call_request("GET", f"{server}results/{str(result['uuid'])}/download",
-                                    authentication_data, logger)
-        if current_tiff.status_code != 200:
-            logger.error("Error downloading %s", result["fileName"])
-            sys.exit(errno.EINVAL)
-        if folder_path != '' and not os.path.exists(final_folder_path):
-            os.makedirs(final_folder_path)
-        with open(os.path.join(final_folder_path, name), "wb") as result_file:
-            result_file.write(current_tiff.content)
-
-
 def download_simulation_results(output_path: str, file_name: str,
                                 simulation_uuid: uuid.UUID,
                                 authentication_data: Optional[dict], server: str,
@@ -1124,96 +1036,6 @@ def download_simulation_results(output_path: str, file_name: str,
             os.makedirs(final_folder_path)
         with open(os.path.join(final_folder_path, name), "wb") as result_file:
             result_file.write(current_tiff.content)
-
-
-def create_prediction_group(prediction_group_uuid: uuid.UUID, data_dict: dict,
-                            session_uuid: uuid.UUID, authentication_data: Optional[dict],
-                            server: str, logger: logging.Logger) -> None:
-    """
-    @summary: Create prediction group
-    @param prediction_group_uuid: {uuid.UUID} uuid of the prediction group
-    @param data_dict: {dict} dictionary of parameters
-    @param session_uuid: {uuid.UUID} uuid of the current session
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    """
-    logger.info("Creation prediction group")
-    prediction_group = {
-        "uuid": str(prediction_group_uuid),
-        "name": data_dict["session"][NAME] + "_predictionGroup",
-        "calculationSessionUuid": str(session_uuid),
-        "creationDate": ""
-    }
-    if "predictionGroupFilteringZone" in data_dict.keys():
-        prediction_group["coordinates"] = data_dict["predictionGroupFilteringZone"]["coordinates"]
-
-    result = call_request("POST", get_resource_uri(server, "predictiongroups", authentication_data),
-                          authentication_data, logger, json_content=prediction_group).json()
-    if "status" in result.keys() and result["status"] != 406:
-        logger.error("Error prediction group %s : %s",
-                     prediction_group[NAME], get_error_message(result))
-        sys.exit(errno.EINVAL)
-    logger.info("Prediction group : %s", prediction_group["uuid"])
-
-
-def create_prediction_for_area(base_station_list: list, user_equipment_list: list,
-                               network_list: list, session_uuid: uuid.UUID,
-                               prediction_group_uuid: uuid.UUID, prediction_settings: dict,
-                               models: dict,
-                               authentication_data: Optional[dict], server: str,
-                               logger: logging.Logger) -> list:
-    """
-    @summary: Create prediction for area type
-    @param base_station_list: {list} list of base station
-    @param user_equipment_list: {list} list of user equipment
-    @param network_list: {dict} list of network datas
-    @param session_uuid: {uuid.UUID} uuid of the current session
-    @param prediction_group_uuid: {uuid.UUID} uuid of the prediction group
-    @param prediction_settings: {dict} dictionary of settings for prediction
-    @param models: {dict} dictionary of models
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    @return: {list} a list of predictions created
-    """
-    logger.info("Creation prediction")
-    global_prediction_list: List[dict] = []
-    prediction_list = []
-    index_base_station = 0
-    index_user_equipment = 0
-    # To create Predictions we iterate on the list of user equipments
-    # List of base stations and user equipments have the same order than network csv
-    # We use this order to match base stations with user equipments
-    while index_user_equipment < len(user_equipment_list):
-        prediction_list.append(
-            fill_prediction_area(user_equipment_list, network_list, base_station_list,
-                                 index_user_equipment, index_base_station, session_uuid,
-                                 prediction_group_uuid, prediction_settings, models,
-                                 authentication_data, server, logger))
-
-        # Every 2000 prediction, post predictions
-        if len(prediction_list) >= 2000:
-            res = call_request("POST", get_resource_uri(server, "predictions", authentication_data),
-                               authentication_data, logger, json_content=prediction_list,
-                               timeout=None)
-            result = res.json()
-            if res.status_code not in (200, 201, 406):
-                logger.error(ERROR_PREDICTION_LOG, get_error_message(result))
-                sys.exit(errno.EINVAL)
-            global_prediction_list.extend(result)
-            prediction_list = []
-        index_user_equipment += 1
-    # post the remaining predictions
-    if len(prediction_list) > 0:
-        res = call_request("POST", get_resource_uri(server, "predictions", authentication_data),
-                           authentication_data, logger, json_content=prediction_list)
-        result = res.json()
-        if res.status_code not in (200, 201, 406):
-            logger.error(ERROR_PREDICTION_LOG, get_error_message(result))
-            sys.exit(errno.EINVAL)
-        global_prediction_list.extend(result)
-    return global_prediction_list
 
 
 def get_resource_uri(server: str, resource_type: str, authentication_data: Optional[dict]) -> str:
@@ -1278,64 +1100,6 @@ def fill_prediction_area(user_equipment_list: list, network_list: list, base_sta
         prediction["priority"] = prediction_settings["priority"]
 
     return prediction
-
-
-def create_prediction_for_point(base_station_list: list, transmitter_list: list,
-                                network_list: list, session_uuid: uuid.UUID,
-                                prediction_group_uuid: uuid.UUID, prediction_settings: dict,
-                                models: dict,
-                                authentication_data: Optional[dict], server: str,
-                                logger: logging.Logger) -> list:
-    """
-    @summary: Create prediction for point type
-    @param base_station_list: {list} list of base station
-    @param transmitter_list: {list} list of transmitter
-    @param network_list: {dict} list of network datas
-    @param session_uuid: {uuid.UUID} uuid of the current session
-    @param prediction_group_uuid: {uuid.UUID} uuid of the prediction group
-    @param prediction_settings: {dict} dictionary of settings for prediction
-    @param models: {dict} dictionary of models
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    @return: {list} a list of predictions created
-    """
-    logger.info("Creation prediction")
-    prediction_list = []
-    global_prediction_list: List[dict] = []
-    index_transmitter = 0
-    # To create Predictions we iterate on the list of transmitters
-    while index_transmitter < len(transmitter_list):
-        prediction_list.append(
-            fill_prediction_point(transmitter_list, network_list, base_station_list,
-                                  index_transmitter, session_uuid,
-                                  prediction_group_uuid, prediction_settings, models,
-                                  authentication_data, server, logger))
-
-        # Every 2000 prediction, post predictions
-        if len(prediction_list) >= 2000:
-            res = call_request("POST", get_resource_uri(server, "predictions", authentication_data),
-                               authentication_data, logger, json_content=prediction_list,
-                               timeout=None)
-            result = res.json()
-            if res.status_code not in (200, 201, 406):
-                logger.error(ERROR_PREDICTION_LOG, get_error_message(result))
-                sys.exit(errno.EINVAL)
-            global_prediction_list.extend(result)
-            prediction_list = []
-        # increments index
-        index_transmitter += 1
-    # post the remaining predictions
-    if len(prediction_list) > 0:
-        res = call_request("POST", get_resource_uri(server, "predictions", authentication_data),
-                           authentication_data, logger, json_content=prediction_list)
-        result = res.json()
-        if res.status_code not in (200, 201, 406):
-            logger.error(ERROR_PREDICTION_LOG, get_error_message(result))
-            sys.exit(errno.EINVAL)
-        global_prediction_list.extend(result)
-
-    return global_prediction_list
 
 
 def fill_prediction_point(transmitter_list: list, network_list: list, base_station_list: list,
@@ -1566,33 +1330,6 @@ def create_session(session: dict, session_uuid: uuid.UUID, authentication_data: 
     logger.info("Session : %s", session["uuid"])
 
 
-def create_user_equipments(network_list: list, prediction_settings: dict,
-                           session_uuid: uuid.UUID, data_dict: dict,
-                           transmitter_list: list, antenna_dict: dict,
-                           logger: logging.Logger) -> list:
-    """
-    @summary: Create user equipments
-    @param network_list: {dict} list of network datas
-    @param prediction_settings: {dict} dictionary of settings for prediction
-    @param session_uuid: {uuid.UUID} uuid of the current session
-    @param data_dict: {dict} dictionary of parameters
-    @param transmitter_list: {dict} list of transmitters
-    @param antenna_dict: {dict} dict of antenna for name to uuid mapping
-    @param logger: {logging.Logger} used to trace output log
-    @return: {list} the list of user equipments created
-    """
-    logger.info("Creation user equipments")
-    user_equipment_list: list[dict] = []
-    for network in network_list:
-        user_equipment = fill_user_equipment(network, session_uuid, data_dict,
-                                             antenna_dict, logger)
-
-        user_equipment_list.append(user_equipment)
-
-
-    return transmitter_list
-
-
 def fill_user_equipment(network: dict, session_uuid: uuid.UUID, data_dict: dict, antenna_dict: dict,
                         logger: logging.Logger) -> dict:
     """
@@ -1753,20 +1490,6 @@ def is_same_base_station(base_station_1: dict, base_station_2: dict) -> bool:
             base_station_1["carrierFrequency"] == base_station_2["carrierFrequency"] and
             base_station_1["transmitPower"] == base_station_2["transmitPower"]
     )
-
-
-def valorize_uuid_of_receivers(transmitter_list: list, global_list_user_equipment: list) -> None:
-    """
-    @summary: Valorize uuid of all receivers in listTransmitters
-              from the result list of user equipments
-    @param transmitter_list: {list} list of transmitters
-    @param global_list_user_equipment: {list} list of user equipments
-    """
-    index_user_equipment = 0
-    for transmitter in transmitter_list:
-        for receiver in transmitter["receivers"]:
-            receiver["uuid"] = global_list_user_equipment[index_user_equipment]["uuid"]
-            index_user_equipment += 1
 
 
 def create_simulation_request(simulation_uuid: uuid.UUID, network_list: list, settings: dict,
