@@ -52,21 +52,12 @@ class NetworkFields(str, Enum):
     TERRAIN_ALTITUDE = ("terrain altitude", False)
     CALCULATION_RADIUS = ("calculation radius", False)
     CALCULATION_RESOLUTION = ("calculation resolution", False)
-    RADIUS_EXTENDED = ("calculation radius extended", False)
-    RESOLUTION_EXTENDED = ("calculation resolution extended", False)
-    MODEL_EXTENDED = ("propagation model extended", False)
     EPRE_OFFSET_SS_VS_RS = ("epre offset ss vs rs", False)
     EPRE_OFFSET_PBCH_VS_RS = ("epre offset pbch vs rs", False)
     EPRE_OFFSET_PDCCH_VS_RS = ("epre offset pdcch vs rs", False)
     EPRE_OFFSET_PDSCH_VS_RS = ("epre offset pdsch vs rs", False)
     NB_ANTENNA_PORTS = ("number antenna ports", False)
     MULTI_ANTENNA_INTERFERENCE_FACTOR = ("multi antenna interference factor", False)
-    ADD_ANTENNAS = ("additional antennas {number}", False)
-    ADD_ANTENNAS_AZIMUTH = ("additional antennas {number} azimuth", False)
-    ADD_ANTENNAS_DOWNTILT = ("additional antennas {number} downtilt", False)
-    ADD_ANTENNAS_ADD_ELEC_DOWNTILT = ("additional antennas {number} additional electrical downtilt", False)
-    ADD_ANTENNAS_PERCENTAGE = ("additional antennas {number} percentage", False)
-    REPEAT_TRANSMITTER_ID = ("repeat transmitter id", False)
     DONOR_LOSS = ("donor loss", False)
     TECHNO = ("techno", False)
     TRAFFICLOAD = ("trafficload", False)
@@ -398,57 +389,6 @@ def validate_antennas(antenna_list: list, logger: logging.Logger) -> None:
             antenna_validated[antenna[NAME]] = sorting_json(antenna)
 
 
-def create_additional_antennas(network: dict, antenna_dict: dict,
-                               logger: logging.Logger) -> list:
-    """
-    @summary: Function to add additional antenna
-    @param network: {dict} network datas
-    @param base_station_uuid: {str} uuid of base station
-    @param antenna_dict: {dict} dict of antenna for name to uuid mapping
-    @param logger: {logging.Logger} used to trace output log
-    @return: {list} a list of additional antennas
-    """
-    additional_antenna_list = []
-    nb_antenna = 1
-
-    has_next_add_antenna = True
-    while has_next_add_antenna:
-        add_antenna_key = NetworkFields.ADD_ANTENNAS.format(number=nb_antenna)
-        add_antenna_azimuth_key = NetworkFields.ADD_ANTENNAS_AZIMUTH.format(number=nb_antenna)
-        add_antenna_downtilt_key = NetworkFields.ADD_ANTENNAS_DOWNTILT.format(number=nb_antenna)
-        add_antenna_percentage_key = NetworkFields.ADD_ANTENNAS_PERCENTAGE.format(number=nb_antenna)
-        add_antenna_fields = [add_antenna_key, add_antenna_percentage_key]
-        found_add_antenna_fields = \
-            list(x in network.keys() and network.get(x) != '' for x in add_antenna_fields)
-
-        if all(found_add_antenna_fields):
-            current_additional_antenna = {
-                "nameAntenna": get_from_dict(network, add_antenna_key),
-                "azimuth": get_float_from_dict(network, add_antenna_azimuth_key, 0),
-                "downtilt": get_float_from_dict(network, add_antenna_downtilt_key, 0),
-                "percentage": get_float_from_dict(network, add_antenna_percentage_key)
-            }
-            current_additional_antenna["antennaUuid"] = \
-                get_resource_uuid_from_cache("Antenna", antenna_dict,
-                                             current_additional_antenna["nameAntenna"], logger)
-
-            add_antennas_elec_downtilt_key = \
-                NetworkFields.ADD_ANTENNAS_ADD_ELEC_DOWNTILT.format(number=nb_antenna)
-            current_additional_antenna["additionalElectricalDowntilt"] = \
-                get_float_from_dict(network, add_antennas_elec_downtilt_key, 0)
-
-            additional_antenna_list.append(current_additional_antenna)
-            nb_antenna = nb_antenna + 1
-        elif any(found_add_antenna_fields):
-            logger.error("Error base station: "
-                         "All or none values must be configured among %s",
-                         add_antenna_fields)
-            sys.exit(errno.EINVAL)
-        else:
-            has_next_add_antenna = False
-
-    return additional_antenna_list
-
 
 def create_gobs(gob_list: list, antenna_dict: dict, authentication_data: Optional[dict],
                 server: str, logger: logging.Logger) -> dict:
@@ -552,8 +492,7 @@ def fill_base_station(network: dict, computation_type: str, session_uuid: uuid.U
         "sessionUuid": str(session_uuid),
         "name": get_from_dict(network, NetworkFields.TRANSMITTER_NAME),
         "networkId": get_from_dict(network, NetworkFields.TRANSMITTER_ID),
-        "transmitPower": get_float_from_dict(network, NetworkFields.EMITTING_POWER, 0),
-        "baseStationAdditionalAntennaList": create_additional_antennas(network, antenna_dict, logger)
+        "transmitPower": get_float_from_dict(network, NetworkFields.EMITTING_POWER, 0)
     }
 
     if NetworkFields.ADDITIONAL_ELECTRICAL_DOWNTILT in network.keys():
@@ -571,19 +510,6 @@ def fill_base_station(network: dict, computation_type: str, session_uuid: uuid.U
         base_station["antennaUuid"] = get_resource_uuid_from_cache("Antenna", antenna_dict,
                                                                    antenna_name, logger)
 
-    # check for repeater
-    repeater_fields = [NetworkFields.REPEAT_TRANSMITTER_ID, NetworkFields.DONOR_LOSS]
-    found_repeater_fields = list(x in network.keys() and network.get(x) != '' for x in repeater_fields)
-    if all(found_repeater_fields):
-        base_station["repeatBaseStationNetworkId"] = \
-            get_from_dict(network, NetworkFields.REPEAT_TRANSMITTER_ID)
-        base_station["donorLoss"] = get_from_dict(network, NetworkFields.DONOR_LOSS)
-        base_station["transmitPower"] = (get_float_from_dict(network, NetworkFields.EMITTING_POWER)
-                                         - get_float_from_dict(network, NetworkFields.DONOR_LOSS))
-    elif any(found_repeater_fields):
-        logger.error("Error base station: All or none values must be configured among %s",
-                     repeater_fields)
-        sys.exit(errno.EINVAL)
 
     if computation_type in (SINR5G, SINR4G):
         base_station["techno"] = get_from_dict(network, NetworkFields.TECHNO)
@@ -1258,7 +1184,6 @@ def create_prediction_for_area(base_station_list: list, user_equipment_list: lis
     index_user_equipment = 0
     # To create Predictions we iterate on the list of user equipments
     # List of base stations and user equipments have the same order than network csv
-    # Main user equipment is always before the extended user equipment sharing the same base station
     # We use this order to match base stations with user equipments
     while index_user_equipment < len(user_equipment_list):
         prediction_list.append(
@@ -1278,9 +1203,6 @@ def create_prediction_for_area(base_station_list: list, user_equipment_list: lis
                 sys.exit(errno.EINVAL)
             global_prediction_list.extend(result)
             prediction_list = []
-        # increments indexes
-        if "_EXTENDED" not in user_equipment_list[index_user_equipment][NAME]:
-            index_base_station += 1
         index_user_equipment += 1
     # post the remaining predictions
     if len(prediction_list) > 0:
@@ -1340,33 +1262,11 @@ def fill_prediction_area(user_equipment_list: list, network_list: list, base_sta
         "predictionGroupUuids": [str(prediction_group_uuid)]
     }
 
-    # Case extended user equipments
-    if "_EXTENDED" in user_equipment_list[index_user_equipment][NAME]:
-        # The extended user equipment use the previous base station
-        # the same than the regular user equipment
-        # The extended user equipment is always after the main user equipment
-        # therefor the index_base_station cannot be negative
-        index_base_station -= 1
-        prediction["extendedOf"] = network_list[index_base_station][NetworkFields.TRANSMITTER_ID]
-        # if the model is defined for the extended, use it, otherwise use the main model
-        if NetworkFields.MODEL_EXTENDED in network_list[index_base_station].keys() and \
-                network_list[index_base_station][NetworkFields.MODEL_EXTENDED]:
-            model_extended = get_model(
-                network_list[index_base_station][NetworkFields.MODEL_EXTENDED], session_uuid, models,
-                authentication_data, server, logger)
-            prediction["modelUuid"] = model_extended["uuid"]
-        else:
-            model_extended = get_model(
-                network_list[index_base_station][NetworkFields.PROPAGATION_MODEL], session_uuid, models,
-                authentication_data, server, logger)
-            prediction["modelUuid"] = model_extended["uuid"]
-        prediction[NAME] = base_station_list[index_base_station][NAME] + "_PREDICTION_EXTENDED"
-    # Regular case
-    else:
-        prediction[NAME] = base_station_list[index_base_station][NAME] + "_PREDICTION"
-        model = get_model(network_list[index_base_station][NetworkFields.PROPAGATION_MODEL],
-                          session_uuid, models, authentication_data, server, logger)
-        prediction["modelUuid"] = model["uuid"]
+
+    prediction[NAME] = base_station_list[index_base_station][NAME] + "_PREDICTION"
+    model = get_model(network_list[index_base_station][NetworkFields.PROPAGATION_MODEL],
+                      session_uuid, models, authentication_data, server, logger)
+    prediction["modelUuid"] = model["uuid"]
 
     prediction["baseStationUuid"] = base_station_list[index_base_station]["uuid"]
 
@@ -1689,17 +1589,6 @@ def create_user_equipments(network_list: list, prediction_settings: dict,
 
         user_equipment_list.append(user_equipment)
 
-        # Check for extended user equipment
-        extended_fields = [NetworkFields.RADIUS_EXTENDED, NetworkFields.RESOLUTION_EXTENDED]
-        found_extended_fields = \
-            list(x in network.keys() and network.get(x) != '' for x in extended_fields)
-        if all(found_extended_fields):
-            user_equipment_list.append(fill_user_equipment_extended(
-                user_equipment, session_uuid, network, prediction_settings))
-        elif any(found_extended_fields):
-            logger.error("Error user equipment: All or none values must be configured among %s",
-                         extended_fields)
-            sys.exit(errno.EINVAL)
 
     return transmitter_list
 
@@ -1843,69 +1732,7 @@ def handle_zmeaning(prediction_settings: dict, logger: logging.Logger) -> str:
     return zmeaning
 
 
-def fill_user_equipment_extended(user_equipment: dict, session_uuid: uuid.UUID, network: dict,
-                                 prediction_settings: dict) -> dict:
-    """
-    @summary: Fill a user equipment extended object
-    @param user_equipment: {dict} user equipment object
-    @param session_uuid: {uuid.UUID} uuid of the current session
-    @param network: {dict} network datas
-    @param prediction_settings: {dict} dictionary of settings for prediction
-    @return: {dict} the user equipment object
-    """
-    user_equipment_extended = deepcopy(user_equipment)
-    user_equipment_extended[NAME] = (get_from_dict(network, NetworkFields.TRANSMITTER_NAME)
-                                     + "_EXTENDED")
-    user_equipment_extended["sessionUuid"] = str(session_uuid)
-    resolution_extended = get_float_from_dict(network, NetworkFields.RESOLUTION_EXTENDED)
-    transmitter_long_lat_coordinate = (NetworkFields.TRANSMITTER_LONGITUDE in network
-                                       and NetworkFields.TRANSMITTER_LATITUDE in network)
-    if "shiftGridCenter" in prediction_settings.keys() \
-            and prediction_settings["shiftGridCenter"] is True:
-        # Shift Grid Center of user equipement
-        tx_x = get_float_from_dict(network, NetworkFields.TRANSMITTER_LONGITUDE) \
-            if transmitter_long_lat_coordinate else get_float_from_dict(network, NetworkFields.TRANSMITTER_EASTING)
-        tx_y = get_float_from_dict(network, NetworkFields.TRANSMITTER_LATITUDE) \
-            if transmitter_long_lat_coordinate else get_float_from_dict(network, NetworkFields.TRANSMITTER_NORTHING)
-        # Define the center of the grid according to the resolution
-        tx_x_grid = resolution_extended \
-                    * math.floor((tx_x + resolution_extended / 2) / resolution_extended)
-        tx_y_grid = resolution_extended \
-                    * math.floor((tx_y + resolution_extended / 2) / resolution_extended)
 
-    else:
-        # default use case
-        tx_x_grid = get_float_from_dict(network, NetworkFields.TRANSMITTER_LONGITUDE) \
-            if transmitter_long_lat_coordinate else get_float_from_dict(network, NetworkFields.TRANSMITTER_EASTING)
-        tx_y_grid = get_float_from_dict(network, NetworkFields.TRANSMITTER_LATITUDE) \
-            if transmitter_long_lat_coordinate else get_float_from_dict(network, NetworkFields.TRANSMITTER_NORTHING)
-
-    calculation_radius_extended = get_float_from_dict(network, NetworkFields.RADIUS_EXTENDED)
-    if transmitter_long_lat_coordinate:
-        r_earth = 6378.137  # radius of the earth in kilometer
-        m = (1 / ((2 * math.pi / 360) * r_earth)) / 1000  # 1 meter in degree
-        lat_min = tx_y_grid - (calculation_radius_extended * m)
-        lat_max = tx_y_grid + (calculation_radius_extended * m)
-        long_min = tx_x_grid - (calculation_radius_extended * m) / math.cos(lat_min * (math.pi / 180))
-        long_max = tx_x_grid + (calculation_radius_extended * m) / math.cos(lat_max * (math.pi / 180))
-        user_equipment_extended["coordinates"] = {
-            "xmin": long_min,
-            "xmax": long_max,
-            "ymin": lat_min,
-            "ymax": lat_max,
-            "resolution": resolution_extended,
-            "epsgCode": 4326
-        }
-    else:
-        user_equipment_extended["coordinates"] = {
-            "xmin": tx_x_grid - calculation_radius_extended,
-            "xmax": tx_x_grid + calculation_radius_extended,
-            "ymin": tx_y_grid - calculation_radius_extended,
-            "ymax": tx_y_grid + calculation_radius_extended,
-            "resolution": resolution_extended
-        }
-
-    return user_equipment_extended
 
 
 def is_same_base_station(base_station_1: dict, base_station_2: dict) -> bool:
@@ -2040,27 +1867,6 @@ def create_propagation_request(network_list: list, settings: dict, session_uuid:
             }
             propagation_list.append(new_propagation)
 
-            # Check for extended user equipment
-            extended_fields = [NetworkFields.RADIUS_EXTENDED, NetworkFields.RESOLUTION_EXTENDED]
-            found_extended_fields = list(x in network.keys() and network.get(x) != '' for x in extended_fields)
-            if all(found_extended_fields):
-                new_user_equipment_extended = fill_user_equipment_extended(
-                    new_user_equipment, session_uuid, network, settings["predictionSettings"])
-                model_extended_name = get_from_dict(network, NetworkFields.MODEL_EXTENDED, model_name)
-                model_extended_uuid = get_resource_uuid_from_cache("PropagationModel", models,
-                                                                   model_extended_name, logger)
-
-                new_propagation_extended = {
-                    "baseStation": new_base_station,
-                    "userEquipments": [new_user_equipment_extended],
-                    "propagationModelUuid": model_extended_uuid,
-                    "extendedOf": get_from_dict(network, NetworkFields.TRANSMITTER_ID)
-                }
-                propagation_list.append(new_propagation_extended)
-            elif any(found_extended_fields):
-                logger.error("Error user equipment: All or none values must be configured among %s",
-                             extended_fields)
-                sys.exit(errno.EINVAL)
 
     new_propagation_request = {
         "propagationScenarios": propagation_list,

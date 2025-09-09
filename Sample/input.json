@@ -11,32 +11,21 @@
   },
   "mapdata": [
     {
-      "name": "parisMapdataSample",
-      "layers": [
-        {
-          "path": "/sharedData/MapData/Software/France/Paris/Sample/DTM/index.xml",
-          "layerType": "DTM",
-          "layerFormat": "BIL"
-        },
-        {
-          "path": "/sharedData/MapData/Software/France/Paris/Sample/Vectors/index.xml",
-          "layerType": "VECTOR",
-          "layerFormat": "SHAPE"
-        }
-      ],
-      "epsgSrid": 32631
+      "name": "seattleMapdata3DTWorld",
+      "type": "3DTWorld",
+      "epsgSrid": 32610
     }
   ],
   "session": {
-    "name": "session_sample_Paris",
-    "description": "Paris sample description, how to run P2A VWeb sample with python client"
+    "name": "session_sample_3DTWorld",
+    "description": "3DTWorld sample description"
   },
   "models": [
     {
-      "name": "model1",
-      "description": "test",
-      "vxfFilePath": "./Volcano_Urban_DP.vxf",
-      "mapdataName": "parisMapdataSample"
+      "name": "propagLR",
+      "description": "generic model",
+      "type": "3DTWorld",
+      "mapdataName": "seattleMapdata3DTWorld"
     }
   ],
   "predictionSettings": {
@@ -78,7 +67,7 @@
       "ymax": null,
       "epsgCode": 4326
     },
-    "resolution": 5
+    "resolution": 10
   },
   "outputPath": "./ScriptResult/"
 }
