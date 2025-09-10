@@ -181,7 +181,6 @@ def get_script_information(logger: logging.Logger) -> None:
     logger.info("* Editor: SIRADEL-ENGIE")
 
 
-
 def get_computation_type(data_dict: dict) -> str:
     """
     @summary: Get type of computation
@@ -376,7 +375,6 @@ def validate_antennas(antenna_list: list, logger: logging.Logger) -> None:
             sys.exit(errno.EINVAL)
         else:
             antenna_validated[antenna[NAME]] = sorting_json(antenna)
-
 
 
 def create_gobs(gob_list: list, antenna_dict: dict, authentication_data: Optional[dict],
@@ -923,67 +921,6 @@ def handle_pull_simulation_status_response(simulation_uuid: uuid.UUID,
     return 1
 
 
-def pull_post_processing_status(post_processing_uuid: uuid.UUID,
-                                authentication_data: Optional[dict], server: str,
-                                logger: logging.Logger) -> None:
-    """
-    @summary: Pull post processing status every 5 seconds
-    @param post_processing_uuid: {uuid.UUID} uuid of the post processing
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    """
-    retry = True
-    while True:
-        time.sleep(5)
-        res = call_request("GET", f"{server}postprocessings/{str(post_processing_uuid)}/status",
-                           authentication_data, logger)
-        response = res.json()
-        if res.status_code != 404:
-            result_code = handle_pull_post_processing_status_response(
-                post_processing_uuid, response, retry, logger)
-            if result_code == 2:
-                # One error occurred, retry once
-                retry = False
-            elif result_code == 0:
-                # Status is done, break the loop
-                break
-        else:
-            logger.error("Server unreachable : %s", str(res.status_code))
-            break
-
-
-def handle_pull_post_processing_status_response(post_processing_uuid: uuid.UUID, response: dict,
-                                                retry: bool, logger: logging.Logger) -> int:
-    """
-    @summary: Handle the response returned by post processing status api call
-    @param post_processing_uuid: {uuid.UUID} uuid of the post processing
-    @param response: {dict} response of api call
-    @param retry: {bool} True if you have to retry the call, False else
-    @param logger: {logging.Logger} used to trace output log
-    @return: {int} 0 if success, 1 if waiting and 2 if retry
-    """
-    progress = int(response["progress"])
-    update_progress(progress)
-    if response["state"] == "WAITING":
-        return 1
-    if response["state"] == "ERROR":
-        logger.error("%s %s %s",
-                     ERROR_POST_PROCESSING, str(post_processing_uuid), response["error"])
-        if retry:
-            logger.warning("Retry")
-            return 2
-        sys.exit(errno.EINVAL)
-    if response["state"] == "DONE":
-        logger.info("Success post processing %s", str(post_processing_uuid))
-        return 0
-    if response["state"] == "CANCELED":
-        logger.warning("Post processing %s has been cancelled. The calculation was stopped.",
-                       str(post_processing_uuid))
-        sys.exit(errno.EINVAL)
-    return 1
-
-
 def download_simulation_results(output_path: str, file_name: str,
                                 simulation_uuid: uuid.UUID,
                                 authentication_data: Optional[dict], server: str,
@@ -1054,170 +991,6 @@ def get_resource_uri(server: str, resource_type: str, authentication_data: Optio
         else f"{server}{resource_type}"
 
 
-def fill_prediction_area(user_equipment_list: list, network_list: list, base_station_list: list,
-                         index_user_equipment: int, index_base_station: int,
-                         session_uuid: uuid.UUID, prediction_group_uuid: uuid.UUID,
-                         prediction_settings: dict, models: dict, authentication_data: Optional[dict],
-                         server: str, logger: logging.Logger) -> dict:
-    """
-    @summary: Fill a prediction object for area type
-    @param user_equipment_list: {list} list of user equipment
-    @param network_list: {dict} list of network datas
-    @param base_station_list: {list} list of base station
-    @param index_user_equipment: {int} index for user equipment list
-    @param index_base_station: {int} index for base station list
-    @param session_uuid: {uuid.UUID} uuid of the current session
-    @param prediction_group_uuid: {uuid.UUID} uuid of the prediction group
-    @param prediction_settings: {dict} dictionary of settings for prediction
-    @param models: {dict} dictionary of models
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    @return: {dict} the prediction object
-    """
-    prediction = {
-        "uuid": str(uuid.uuid4()),
-        "calculationSessionUuid": str(session_uuid),
-        "creationDate": "",
-        "resultTypesList": prediction_settings["predictionResultType"],
-        "userEquipmentUuids": [user_equipment_list[index_user_equipment]["uuid"]],
-        "predictionGroupUuids": [str(prediction_group_uuid)]
-    }
-
-
-    prediction[NAME] = base_station_list[index_base_station][NAME] + "_PREDICTION"
-    model = get_model(network_list[index_base_station][NetworkFields.PROPAGATION_MODEL],
-                      session_uuid, models, authentication_data, server, logger)
-    prediction["modelUuid"] = model["uuid"]
-
-    prediction["baseStationUuid"] = base_station_list[index_base_station]["uuid"]
-
-    if "isotropic" in prediction_settings.keys():
-        prediction["isotropic"] = prediction_settings["isotropic"]
-    if "force" in prediction_settings.keys():
-        prediction["force"] = prediction_settings["force"]
-    if "priority" in prediction_settings.keys():
-        prediction["priority"] = prediction_settings["priority"]
-
-    return prediction
-
-
-def fill_prediction_point(transmitter_list: list, network_list: list, base_station_list: list,
-                          index_transmitter: int, session_uuid: uuid.UUID,
-                          prediction_group_uuid: uuid.UUID, prediction_settings: dict, models: dict,
-                          authentication_data, server: str, logger: logging.Logger) -> dict:
-    """
-    @summary: Fill a prediction object for point type
-    @param transmitter_list: {list} list of transmitters
-    @param network_list: {dict} list of network datas
-    @param base_station_list: {list} list of base station
-    @param index_transmitter: {int} index for transmitter list
-    @param session_uuid: {uuid.UUID} uuid of the current session
-    @param prediction_group_uuid: {uuid.UUID} uuid of the prediction group
-    @param prediction_settings: {dict} dictionary of settings for prediction
-    @param models: {dict} dictionary of models
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    @return: {dict} the prediction object
-    """
-    model = get_model(network_list[index_transmitter][NetworkFields.PROPAGATION_MODEL],
-                      session_uuid, models, authentication_data, server, logger)
-
-    prediction = {
-        "uuid": str(uuid.uuid4()),
-        "name": base_station_list[index_transmitter][NAME] + "_PREDICTION",
-        "baseStationUuid": base_station_list[index_transmitter]["uuid"],
-        "calculationSessionUuid": str(session_uuid),
-        "predictionGroupUuids": [str(prediction_group_uuid)],
-        "creationDate": "",
-        "resultTypesList": prediction_settings["predictionResultType"],
-        "userEquipmentUuids": list(
-            map(lambda x: x["uuid"], transmitter_list[index_transmitter]["receivers"])),
-        "modelUuid": model["uuid"]
-    }
-
-    if "isotropic" in prediction_settings.keys():
-        prediction["isotropic"] = prediction_settings["isotropic"]
-    if "force" in prediction_settings.keys():
-        prediction["force"] = prediction_settings["force"]
-    if "priority" in prediction_settings.keys():
-        prediction["priority"] = prediction_settings["priority"]
-
-    return prediction
-
-
-def pull_prediction_group_status(prediction_group_uuid: uuid.UUID,
-                                 authentication_data: Optional[dict], server: str,
-                                 logger: logging.Logger) -> None:
-    """
-    @summary: Pull prediction group status every 5 seconds
-    @param prediction_group_uuid: {uuid.UUID} uuid of the prediction group
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    """
-    retry = True
-    while True:
-        time.sleep(5)
-        res = call_request("GET", f"{server}predictiongroups/{str(prediction_group_uuid)}/status",
-                           authentication_data, logger)
-        response = res.json()
-        if res.status_code != 404:
-            result_code = handle_pull_prediction_group_status_response(
-                prediction_group_uuid, response, retry, authentication_data, server, logger)
-            if result_code == 2:
-                # One error occurred, retry once
-                retry = False
-            elif result_code == 0:
-                # Status is done, break the loop
-                break
-        else:
-            logger.error("Server unreachable : %s", str(res.status_code))
-            break
-
-
-def handle_pull_prediction_group_status_response(prediction_group_uuid: uuid.UUID,
-                                                 response: dict, retry: bool,
-                                                 authentication_data: Optional[dict], server: str,
-                                                 logger: logging.Logger) -> int:
-    """
-    @summary: Handle the response returned by prediction group status api call
-    @param prediction_group_uuid: {uuid.UUID} uuid of the prediction group
-    @param response: {dict} response of api call
-    @param retry: {bool} True if you have to retry the call, False else
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    @return: {int} 0 if success, 1 if waiting and 2 if retry
-    """
-    progress = int(response["progress"])
-    update_progress(progress)
-    if response["state"] == "WAITING":
-        return 1
-    if response["state"] == "ERROR":
-        logger.error("%s %s",
-                     ERROR_PREDICTION_GROUP, str(prediction_group_uuid))
-        if retry:
-            logger.warning("Retry")
-            return 2
-        get_predictions_errors(prediction_group_uuid, authentication_data, server, logger)
-        sys.exit(errno.EINVAL)
-    if response["state"] == "DONE":
-        logger.info("Success prediction group %s", str(prediction_group_uuid))
-        return 0
-    if response["state"] == "DONE_WITH_ERROR":
-        logger.warning("Prediction group finished : some predictions failed %s",
-                       str(prediction_group_uuid))
-        logger.warning("Post processing will be launched with partial results")
-        return 0
-    if response["state"] == "CANCELED":
-        logger.warning("Prediction group %s has been cancelled. The calculation was stopped.",
-                       str(prediction_group_uuid))
-        sys.exit(errno.EINVAL)
-    return 1
-
-
 def download_simulation_predictions_results(simulation_uuid: uuid.UUID,
                                             output_path: str, file_name: str,
                                             authentication_data: Optional[dict], server: str,
@@ -1285,29 +1058,6 @@ def download_simulation_predictions_results(simulation_uuid: uuid.UUID,
                 sys.exit(errno.EINVAL)
             with open(pred_path + name, "wb") as result_file:
                 result_file.write(current_tiff.content)
-
-
-def get_predictions_errors(prediction_group_uuid: uuid.UUID, authentication_data: Optional[dict],
-                           server: str, logger: logging.Logger) -> None:
-    """
-    @summary: Get predictions errors
-    @param prediction_group_uuid: {uuid.UUID} uuid of the prediction group
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    """
-    param = {
-        "groupid": str(prediction_group_uuid)
-    }
-    res = call_request("GET", f"{server}predictions", authentication_data, logger, params=param)
-    prediction_list = res.json()
-    if res.status_code in (404, 400):
-        logger.error("Error getting predictions : server unreachable ?")
-        sys.exit(errno.EINVAL)
-    for prediction in prediction_list:
-        if prediction["status"]["state"] == "ERROR":
-            logger.error("%s : %s", prediction[NAME], prediction["status"]["error"])
-    sys.exit(errno.EINVAL)
 
 
 def create_session(session: dict, session_uuid: uuid.UUID, authentication_data: Optional[dict],
@@ -1467,9 +1217,6 @@ def handle_zmeaning(prediction_settings: dict, logger: logging.Logger) -> str:
                 logger.error("unknown receptionHeightReference, must be GROUND or CLUTTER")
                 sys.exit(errno.EINVAL)
     return zmeaning
-
-
-
 
 
 def is_same_base_station(base_station_1: dict, base_station_2: dict) -> bool:
