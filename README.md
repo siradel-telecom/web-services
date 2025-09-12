@@ -6,9 +6,13 @@ Siradel Web Services API offers an easy integration of simulation capabilities, 
 API documentation is published in a Postman environnement
 https://docs.bloonetws.siradel.com
 
-Swagger API
-
-
 # Sample codes
-This repositery exposes integration sample codes in python, and standard ressources associated
+This repositery exposes an API integration sample code in python.
+To ease the usage, this integration summarized inputs into two files : input.json and a network.csv file
+1. Request API access to contact@siradel.com
+2. Configure input.json file (see sample file) with provided credentials and your custom information
+3. Configure network.csv file (see sample file)
+4. run client_simulation.py with input.json as argument
+
+python3 client_simulation.py -i input.json
 
