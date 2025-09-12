@@ -3,11 +3,11 @@ Siradel simulation web services
 Siradel Web Services API offers an easy integration of simulation capabilities, including access to Volcano propagation model and high accuracy 3D maps. You can integrate it in your custom application, or scripting environment.
 
 # API documentation
-API documentation is published in a Postman environnement
+API documentation is published in a Postman environment
 https://docs.bloonetws.siradel.com
 
 # Sample codes
-This repositery exposes an API integration sample code in python.
+This repository exposes an API integration sample code in python.
 To ease the usage, this integration summarized inputs into two files : input.json and a network.csv file
 1. Request API access to contact@siradel.com
 2. Configure input.json file (see sample file) with provided credentials and your custom information
