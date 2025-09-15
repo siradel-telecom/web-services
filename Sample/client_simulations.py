@@ -924,6 +924,7 @@ def handle_pull_simulation_status_response(simulation_uuid: uuid.UUID,
 def download_simulation_results(output_path: str, file_name: str,
                                 simulation_uuid: uuid.UUID,
                                 authentication_data: Optional[dict], server: str,
+                                download_server: str,
                                 logger: logging.Logger) -> None:
     """
     @summary: Download the simulation results files
@@ -932,6 +933,7 @@ def download_simulation_results(output_path: str, file_name: str,
     @param simulation_uuid: {uuid.UUID} uuid of the simulation
     @param authentication_data: {dict} authentication data
     @param server: {str} server url
+    @param download_server: {str} download server url
     @param logger: {logging.Logger} used to trace output log
     """
     logger.info("Download simulation results %s", simulation_uuid)
@@ -964,7 +966,7 @@ def download_simulation_results(output_path: str, file_name: str,
             name = split_name[0]
         final_folder_path = os.path.join(path, folder_path)
 
-        current_tiff = call_request("GET", f"{server}results/{str(result['uuid'])}/download",
+        current_tiff = call_request("GET", f"{download_server}results/{str(result['uuid'])}/download",
                                     authentication_data, logger)
         if current_tiff.status_code != 200:
             logger.error("Error downloading %s", result["fileName"])
@@ -994,6 +996,7 @@ def get_resource_uri(server: str, resource_type: str, authentication_data: Optio
 def download_simulation_predictions_results(simulation_uuid: uuid.UUID,
                                             output_path: str, file_name: str,
                                             authentication_data: Optional[dict], server: str,
+                                            download_server: str,
                                             logger: logging.Logger) -> None:
     """
     @summary: Download the predictions results files of the simulation
@@ -1002,6 +1005,7 @@ def download_simulation_predictions_results(simulation_uuid: uuid.UUID,
     @param file_name: {str} the file name
     @param authentication_data: {dict} authentication data
     @param server: {str} server url
+    @param download_server: {str} download server url
     @param logger: {logging.Logger} used to trace output log
     """
     logger.info("Download predictions results of simulation %s", simulation_uuid)
@@ -1051,7 +1055,7 @@ def download_simulation_predictions_results(simulation_uuid: uuid.UUID,
 
         for result in results:
             name = result["fileName"]
-            current_tiff = call_request("GET", f"{server}results/{str(result['uuid'])}/download",
+            current_tiff = call_request("GET", f"{download_server}results/{str(result['uuid'])}/download",
                                         authentication_data, logger)
             if current_tiff.status_code != 200:
                 logger.error("Error downloading %s", name)
@@ -1380,16 +1384,16 @@ def call_request(method: str, url: str, authentication_data: Optional[dict], log
     res = None
     if method.upper() == "POST":
         res = requests.post(url=url, files=files, json=json_content, params=params,
-                            timeout=timeout, headers=headers)
+                            timeout=timeout,  headers=headers, verify=False)
     elif method.upper() == "PUT":
         res = requests.put(url=url, files=files, json=json_content, params=params,
-                           timeout=timeout, headers=headers)
+                           timeout=timeout,  headers=headers, verify=False)
     elif method.upper() == "GET":
         res = requests.get(url=url, files=files, json=json_content, params=params,
-                           timeout=timeout, headers=headers)
+                           timeout=timeout,  headers=headers, verify=False)
     elif method.upper() == "DELETE":
         res = requests.delete(url=url, files=files, json=json_content, params=params,
-                              timeout=timeout, headers=headers)
+                              timeout=timeout,  headers=headers, verify=False)
     else:
         logger.error("Method name %S not implemented", method.upper())
         sys.exit(errno.EINVAL)
@@ -1425,7 +1429,7 @@ def get_access_token(authentication_data: Optional[dict], logger: logging.Logger
 
     response = requests.post(
         authentication_data["url"],
-        data=payload
+        data=payload, verify=False
     )
 
     json_response = response.json()
@@ -1461,7 +1465,7 @@ def refresh_token(authentication_data: Optional[dict], logger: logging.Logger) -
 
     response = requests.post(
         authentication_data["url"],
-        data=payload
+        data=payload, verify=False
     )
 
     json_response = response.json()
@@ -1501,6 +1505,7 @@ if __name__ == "__main__":
 
     start_execution_time = time.time()
     server_url = json_input_file["serverUrl"]
+    download_url = json_input_file["downloadUrl"]
 
     new_file_name = json_input_file["predictionSettings"]["networkFile"].split("/")
     new_file_name = new_file_name[len(new_file_name) - 1]
@@ -1544,14 +1549,14 @@ if __name__ == "__main__":
 
     download_simulation_results(output_directory_path, new_file_name,
                                 SIMULATION_UUID, AUTHENTICATION,
-                                server_url, LOGGER)
+                                server_url, download_url, LOGGER)
 
     end_simulation_execution_time = time.time()
 
     # Download prediction results if -p argument is present
     if arguments.downloadPrediction:
         download_simulation_predictions_results(
-            SIMULATION_UUID, output_directory_path, new_file_name, AUTHENTICATION, server_url, LOGGER)
+            SIMULATION_UUID, output_directory_path, new_file_name, AUTHENTICATION, server_url, download_url, LOGGER)
 
     end_prediction_download_time = time.time()
 

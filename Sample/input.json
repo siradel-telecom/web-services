@@ -1,7 +1,8 @@
 {
-  "serverUrl": "http://VOLCANOWEBSERVER:PORT/",
+  "serverUrl": "https://API_BLOONET_SAAS_URL/",
+  "downloadUrl": "https://DOWNLOAD_BLOONET_SAAS_URL/",
   "authentication": {
-    "required": false,
+    "required": true,
     "publicPrediction": false,
     "url": "URL",
     "clientId": "CLIENTID",
@@ -17,8 +18,8 @@
     }
   ],
   "session": {
-    "name": "session_sample_3DTWorld",
-    "description": "3DTWorld sample description"
+    "name": "session_sample_SaaS",
+    "description": "SaaS sample description"
   },
   "models": [
     {
