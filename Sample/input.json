@@ -29,7 +29,7 @@
     }
   ],
   "predictionSettings": {
-    "networkFile": "./hw_network_sample.csv",
+    "networkFile": "./network_sample.csv",
     "predictionResultType": [
       "RECEIVED_POWER"
     ],
