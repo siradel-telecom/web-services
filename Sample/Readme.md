@@ -1,11 +1,13 @@
 # How works the python client ?
+Python client is a sample code that enables running a simulation, by defining inputs into a csv file and input.json file.
+It relies on Siradel Web Services API.
+
 ## Run Python script on Linux environment
     python3 client.py –i input.json -p
 ## Run Python script on Windows environment
     py client.py –i input.json -p
 	
 # Details on arguments
-
 ## input.json content
 
 ## network.csv content
