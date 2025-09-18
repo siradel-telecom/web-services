@@ -11,7 +11,7 @@ It relies on Siradel Web Services API.
 ## input.json content
 You can set antenna in input.json file, modify mapdata EPSG code
 ## network.csv content
-- network csv file must reference antenna and propagation model defined in input.json file
+network csv file must reference antenna and propagation model defined in input.json file
 
 	transmitter id;transmitter name;transmitter easting;transmitter northing;transmitter height;azimuth;downtilt;frequency;antenna;propagation model;calculation resolution;calculation radius;emitting power;comments
 	1;tx1;550097;5272898;10;0;1;900;Dir_H68_V7_tilt4_PolV_19dBi;propagLR;10;2000;0;
