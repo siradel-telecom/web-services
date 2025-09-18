@@ -32,18 +32,20 @@ network file (.csv) must reference antenna and propagation model defined in inpu
 
 # You have run simulation through Siradel Web Services client and want to go further from the API ?
 If you have run first simulations from the client, and want to retrieved your results and go further, you have to move on the steps below.
-In you input.json, specify the Tarana antenna you have used through the webclient.
+First, update configuration files input.json + newtwork file (.csv), based on what you have set up on the web client
 
+### Transmitters
+You can directly reuse transmitter from the transmitter table into the network file (.csv).
+
+### Antenna
 	"antennas": [
 	{
 		"name": " Tarana_BN_3GHz_Compact_R0 ",
 		"antennaFile": "./ Tarana_BN_3GHz_Compact_R0.xml"
-  
-### Integrate simulation parameters in python client configuration
-You can directly reuse transmitter from the transmitter table into the network file (.csv).
-You need to integrate simulation configuration parameters
-- Receiver height -> input.json (receptionHeights)
-- Receiver antenna gain (dBi) and Simulation margin (dB) in network file (.csv), as described below.
+### Receiver height  
+-> input.json (receptionHeights)
+### Receiver antenna gain (dBi) and Simulation margin (dB)
+-> in network file (.csv), as described below.
   
 	e.g if you consider following parameters in the web client configuration :
 		Emitting power (dB) : 25
@@ -51,9 +53,15 @@ You need to integrate simulation configuration parameters
 		Simulation margin (dB) : 5
 		Set your transmitter emitting power (in network.csv file) at : 25 + 10 -5 = 30
 
-- Frequency -> network file (.csv) (frequency)
-- Transmitters antenna -> add antenna in input.json and use this antenna in netwok file (.csv)
-- Computation radius and Resolution -> network file (.csv) (computation radius and computation resolution)
-- Propagation model -> network file (.csv) (propagation model)
-	. for Fixed wireless access -> input.json (set models/name to Fixed Wireless Access) and network file (.csv) (set propagation model to Fixed Wireless Access)
-  	. for mobility -> input.json (set models/name to Mobility) and network file (.csv) (set propagation model to Mobility)
+### Frequency
+-> network file (.csv) (frequency)
+### Transmitters antenna
+-> add antenna in input.json and use this antenna in netwok file (.csv)
+### Computation radius and Resolution
+-> network file (.csv) (computation radius and computation resolution)
+### Propagation model
+-> network file (.csv) (propagation model)
+- For Fixed wireless access -> input.json (set models/name to Fixed Wireless Access) and network file (.csv) (set propagation model to Fixed Wireless Access)
+- For mobility -> input.json (set models/name to Mobility) and network file (.csv) (set propagation model to Mobility)
+
+Then, you can run the python client and retrived your results locally.
