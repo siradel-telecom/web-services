@@ -20,35 +20,16 @@
 2. In input.json, set the EPSG code you are using. It must correspond to a UTM zone (32610, 32611, ...)
 3. Run client_simulation.py
 
-# How to exploit results
-Results are written in geotiff format (.tif), and can be post processed in python using dedicated libraries, or in any GIS tool.
-Note of TIF specificities :
-> -10 000 value is used to define non requested area. To visualiser the TIF properly, you need to adjust color palette (in some tools, it can be automately set based on min value)
-
-Siradel simulation web services
-Siradel Web Services API offers an easy integration of simulation capabilities, including access to Volcano propagation model and high accuracy 3D maps. You can integrate it in your custom application, or scripting environment.
-
-# Siradel Web Services web client
-A web client integrates our API, to enable easy coverage simulation on a network.
-You can watch the worklow overview on the video :
-https://www.youtube.com/watch?v=c9_HQC2iPx4
-
-# API documentation
-API documentation is published in a Postman environment
-https://docs.bloonetws.siradel.com
-
-# Sample codes
-This repository exposes an API integration sample code in python.
-To ease the usage, this integration summarized inputs into two files : input.json and a network.csv file
-1. Request API access to contact@siradel.com
-2. Configure input.json file (see sample file) with provided credentials and your custom information
-3. Configure network.csv file (see sample file)
-4. run client_simulation.py with input.json as argument
-
-python3 client_simulation.py -i input.json
-
-# Want to test our API
-Simply request for a trial access to contact@siradel.com, you will receive from our team trial credentials.
-Il will enable access to the API :
-- for your integration tests
-- through ou web client
+# You have run simulation through Siradel Web Services client and want to go further from the API ?
+If you have run first simulations from the client, and want to retrieved your results and go further, you have to move on the steps below.
+In you input.json, specify the Tarana antenna you have used through the webclient.
+	"antennas": [
+	{
+		"name": " Tarana_BN_3GHz_Compact_R0 ",
+		"antennaFile": "./ Tarana_BN_3GHz_Compact_R0.xml"
+For the two simulation configuration parameters "Receiver antenna gain (dBi)" and "Simulation margin (dB)", you need to integrate these values onto transmitters transmit power in the csv file.
+e.g if you consider following parameters in the web client configuration :
+- Emitting power (dB) : 25
+- Receiver antenna gain (dBi) : 10
+- Simulation margin (dB) : 5
+Set your transmitter emitting power (in network.csv file) at : 25 + 10 -5 = 30
