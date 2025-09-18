@@ -1,15 +1,21 @@
-# How works the python client ?
+# How to run the python client ?
+You can run python client through any python 3 environement.
 
-## Run Python script on Linux environment
+### Run Python script on Linux environment
     python3 client.py –i input.json -p
-## Run Python script on Windows environment
+### Run Python script on Windows environment
     py client.py –i input.json -p
 	
 # Details on arguments
-## input.json content
-You can set antenna in input.json file, modify mapdata EPSG code
-## network.csv content
-network.csv file must reference antenna and propagation model defined in input.json file
+
+### input.json content
+You can set in input.json all simulation parameters. Main parameters to adjust and check are :
+- antenna
+- network file (.csv)
+- mapdata EPSG code
+  
+### network.csv content
+network file (.csv) must reference antenna and propagation model defined in input.json file
 
 	transmitter id;transmitter name;transmitter easting;transmitter northing;transmitter height;azimuth;downtilt;frequency;antenna;propagation model;calculation resolution;calculation radius;emitting power;comments
 	1;tx1;550097;5272898;10;0;1;900;Dir_H68_V7_tilt4_PolV_19dBi;propagLR;10;2000;0;
@@ -27,13 +33,27 @@ network.csv file must reference antenna and propagation model defined in input.j
 # You have run simulation through Siradel Web Services client and want to go further from the API ?
 If you have run first simulations from the client, and want to retrieved your results and go further, you have to move on the steps below.
 In you input.json, specify the Tarana antenna you have used through the webclient.
+
 	"antennas": [
 	{
 		"name": " Tarana_BN_3GHz_Compact_R0 ",
 		"antennaFile": "./ Tarana_BN_3GHz_Compact_R0.xml"
-For the two simulation configuration parameters "Receiver antenna gain (dBi)" and "Simulation margin (dB)", you need to integrate these values onto transmitters transmit power in the csv file.
-e.g if you consider following parameters in the web client configuration :
-- Emitting power (dB) : 25
-- Receiver antenna gain (dBi) : 10
-- Simulation margin (dB) : 5
-Set your transmitter emitting power (in network.csv file) at : 25 + 10 -5 = 30
+  
+### Integrate simulation parameters in python client configuration
+You can directly reuse transmitter from the transmitter table into the network file (.csv).
+You need to integrate simulation configuration parameters
+- Receiver height -> input.json (receptionHeights)
+- Receiver antenna gain (dBi) and Simulation margin (dB) in network file (.csv), as described below.
+  
+	e.g if you consider following parameters in the web client configuration :
+		Emitting power (dB) : 25
+		Receiver antenna gain (dBi) : 10
+		Simulation margin (dB) : 5
+		Set your transmitter emitting power (in network.csv file) at : 25 + 10 -5 = 30
+
+- Frequency -> network file (.csv) (frequency)
+- Transmitters antenna -> add antenna in input.json and use this antenna in netwok file (.csv)
+- Computation radius and Resolution -> network file (.csv) (computation radius and computation resolution)
+- Propagation model -> network file (.csv) (propagation model)
+	. for Fixed wireless access -> input.json (set models/name to Fixed Wireless Access) and network file (.csv) (set propagation model to Fixed Wireless Access)
+  	. for mobility -> input.json (set models/name to Mobility) and network file (.csv) (set propagation model to Mobility)
