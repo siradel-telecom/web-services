@@ -1,14 +1,18 @@
 # How works the python client ?
+
 ## Run Python script on Linux environment
     python3 client.py –i input.json -p
 ## Run Python script on Windows environment
     py client.py –i input.json -p
 	
 # Details on arguments
-
 ## input.json content
-
+You can set antenna in input.json file, modify mapdata EPSG code
 ## network.csv content
+network.csv file must reference antenna and propagation model defined in input.json file
+
+	transmitter id;transmitter name;transmitter easting;transmitter northing;transmitter height;azimuth;downtilt;frequency;antenna;propagation model;calculation resolution;calculation radius;emitting power;comments
+	1;tx1;550097;5272898;10;0;1;900;Dir_H68_V7_tilt4_PolV_19dBi;propagLR;10;2000;0;
 
 # How to run a simulation using latlong transmitter coordinates
 1. Build your csv file, based on network_4326.csv sample
