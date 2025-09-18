@@ -38,10 +38,15 @@ First, update configuration files input.json + newtwork file (.csv), based on wh
 You can directly reuse transmitter from the transmitter table into the network file (.csv).
 
 ### Antenna
+-> input.json : add antenna you want to use
+
 	"antennas": [
 	{
 		"name": " Tarana_BN_3GHz_Compact_R0 ",
 		"antennaFile": "./ Tarana_BN_3GHz_Compact_R0.xml"
+
+  -> network file (.csv) : use this antenna name for antenna field
+  
 ### Receiver height  
 -> input.json (receptionHeights)
 ### Receiver antenna gain (dBi) and Simulation margin (dB)
