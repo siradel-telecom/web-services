@@ -1182,10 +1182,10 @@ def fill_user_equipment(network: dict, session_uuid: uuid.UUID, data_dict: dict,
             long_min = tx_x_grid - (calculation_radius * m) / math.cos(lat_min * (math.pi / 180))
             long_max = tx_x_grid + (calculation_radius * m) / math.cos(lat_max * (math.pi / 180))
             user_equipment["coordinates"] = {
-                "xmin": long_min,
-                "xmax": long_max,
-                "ymin": lat_min,
-                "ymax": lat_max,
+                "xmin": min(long_min, long_max),
+                "xmax": max(long_min, long_max),
+                "ymin": min(lat_min, lat_max),
+                "ymax": max(lat_min, lat_max),
                 "resolution": resolution,
                 "epsgCode": 4326
             }
