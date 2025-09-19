@@ -10,6 +10,7 @@ You can run python client through any python 3 environement.
 
 ### input.json content
 You can set in input.json all simulation parameters. Main parameters to adjust and check are :
+- credential : insert your LOGIN and PASSWORD
 - antenna
 - network file (.csv)
 - mapdata EPSG code
@@ -19,6 +20,9 @@ network file (.csv) must reference antenna and propagation model defined in inpu
 
 	transmitter id;transmitter name;transmitter easting;transmitter northing;transmitter height;azimuth;downtilt;frequency;antenna;propagation model;calculation resolution;calculation radius;emitting power;comments
 	1;tx1;550097;5272898;10;0;1;900;Dir_H68_V7_tilt4_PolV_19dBi;propagLR;10;2000;0;
+
+ ### Per transmitter prediction
+ If you add -p argument to the command line (optional), it will extract to your local result folder per transmitter coverage prediction, additionnally to best signal output
 
 # How to run a simulation using latlong transmitter coordinates
 1. Build your csv file, based on network_4326.csv sample
@@ -32,7 +36,22 @@ network file (.csv) must reference antenna and propagation model defined in inpu
 
 # You have run simulation through Siradel Web Services client and want to go further from the API ?
 If you have run first simulations from the client, and want to retrieved your results and go further, you have to move on the steps below.
-First, update configuration files input.json + newtwork file (.csv), based on what you have set up on the web client
+First, update configuration files input.json + newtwork file (.csv), based on what you have set up on the web client.
+You can use input_4326.json and network_4326.cv files.
+
+### Modify your credential info in input.json
+Insert your user LOGIN and PASSWORD in the credential section of input.json
+
+	"serverUrl": "https://api.bloonetws.siradel.com/",
+	"downloadUrl": "https://dl.bloonetws.siradel.com/",
+	"authentication": {
+ 	"required": true,
+	"publicPrediction": false,
+	"url": "https://keycloak.bloonetws.siradel.com/realms/volcanoweb/protocol/openid-connect/token",
+	"clientId": "volcano-web-cli",
+	"clientSecret": "9QZGszL6HzkGmjrMaUNyakWfqIdyZyqa",
+	"username": "LOGIN",
+	"password": "PASSWORD"
 
 ### Transmitters
 You can directly reuse transmitter from the transmitter table into the network file (.csv).
@@ -70,3 +89,5 @@ You can directly reuse transmitter from the transmitter table into the network f
 - For mobility -> input.json (set models/name to Mobility) and network file (.csv) (set propagation model to Mobility)
 
 Then, you can run the python client and retrived your results locally.
+
+	python3 client.py -i input_4326.json
