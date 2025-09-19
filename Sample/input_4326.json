@@ -6,8 +6,8 @@
     "publicPrediction": false,
     "url": "https://keycloak.bloonetws.siradel.com/realms/volcanoweb/protocol/openid-connect/token",
     "clientId": "volcano-web-cli",
-    "username": "acordonnier",
-    "password": "PH60NzK3vZVIU78JZAFd"
+    "username": "USERNAME",
+    "password": "PASSWORD"
   },
   "mapdata": [
     {
