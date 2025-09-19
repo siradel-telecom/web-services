@@ -1,11 +1,11 @@
 {
-  "serverUrl": "https://API_BLOONET_SAAS_URL/",
-  "downloadUrl": "https://DOWNLOAD_BLOONET_SAAS_URL/",
+  "serverUrl": "https://api.bloonetws.siradel.com/",
+  "downloadUrl": "https://dl.bloonetws.siradel.com/",
   "authentication": {
     "required": true,
     "publicPrediction": false,
-    "url": "URL",
-    "clientId": "CLIENTID",
+    "url": "https://keycloak.bloonetws.siradel.com/realms/volcanoweb/protocol/openid-connect/token",
+    "clientId": "volcano-web-cli",
     "username": "USERNAME",
     "password": "PASSWORD"
   },
