@@ -1422,7 +1422,6 @@ def get_access_token(authentication_data: Optional[dict], logger: logging.Logger
     payload = {
         "grant_type": "password",
         "client_id": authentication_data["clientId"],
-        "client_secret": authentication_data["clientSecret"],
         "username": authentication_data["username"],
         "password": authentication_data["password"]
     }
@@ -1459,7 +1458,6 @@ def refresh_token(authentication_data: Optional[dict], logger: logging.Logger) -
     payload = {
         "grant_type": "refresh_token",
         "client_id": authentication_data["clientId"],
-        "client_secret": authentication_data["clientSecret"],
         "refresh_token": REFRESH_TOKEN
     }
 
@@ -1580,3 +1578,4 @@ if __name__ == "__main__":
         delete_scenarii_dir(AUTHENTICATION, server_url, LOGGER)
 
     LOGGER.info("Total execution time: %.2f seconds", (time.time() - start_execution_time))
+
