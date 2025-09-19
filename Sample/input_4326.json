@@ -1,0 +1,73 @@
+{
+  "serverUrl": "https://api.bloonetws.siradel.com/",
+  "downloadUrl": "https://dl.bloonetws.siradel.com/",
+  "authentication": {
+    "required": true,
+    "publicPrediction": false,
+    "url": "https://keycloak.bloonetws.siradel.com/realms/volcanoweb/protocol/openid-connect/token",
+    "clientId": "volcano-web-cli",
+    "username": "acordonnier",
+    "password": "PH60NzK3vZVIU78JZAFd"
+  },
+  "mapdata": [
+    {
+      "name": "seattleMapdata3DTWorld",
+      "type": "3DTWorld",
+      "epsgSrid": 32610
+    }
+  ],
+  "session": {
+    "name": "test 1",
+    "description": "SaaS sample description"
+  },
+  "models": [
+    {
+      "name": "Fixed Wireless Access",
+      "description": "generic model",
+      "type": "3DTWorld",
+      "mapdataName": "seattleMapdata3DTWorld"
+    }
+  ],
+  "predictionSettings": {
+    "networkFile": "./network_sample_4326.csv",
+    "predictionResultType": [
+      "RECEIVED_POWER"
+    ],
+    "receptionHeights": [
+      1.5
+    ],
+    "receptionHeightReference": "GROUND",
+    "isotropic": false,
+    "force": false
+  },
+  "antennas": [
+    {
+      "name": "Tarana_BN_3GHz_Compact_R0",
+      "antennaFile": "./Tarana_BN_3GHz_Compact_R0.xml"
+    }
+  ],
+  "predictionGroupFilteringZone": {
+    "coordinates": {
+      "xmin": null,
+      "xmax": null,
+      "ymin": null,
+      "ymax": null
+    }
+  },
+  "network": {
+    "computationType": "Custom",
+    "computationResultType": [
+      "BEST_SERVER",
+      "DL_BEST_SIGNAL"
+    ],
+    "computationZone": {
+      "xmin": null,
+      "xmax": null,
+      "ymin": null,
+      "ymax": null,
+      "epsgCode": 4326
+    },
+    "resolution": 10
+  },
+  "outputPath": "./ScriptResult/"
+}
