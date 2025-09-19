@@ -21,9 +21,6 @@ network file (.csv) must reference antenna and propagation model defined in inpu
 	transmitter id;transmitter name;transmitter easting;transmitter northing;transmitter height;azimuth;downtilt;frequency;antenna;propagation model;calculation resolution;calculation radius;emitting power;comments
 	1;tx1;550097;5272898;10;0;1;900;Dir_H68_V7_tilt4_PolV_19dBi;propagLR;10;2000;0;
 
- ### Per transmitter prediction
- If you add -p argument to the command line (optional), it will extract to your local result folder per transmitter coverage prediction, additionnally to best signal output
-
 # How to run a simulation using latlong transmitter coordinates
 1. Build your csv file, based on network_4326.csv sample
 2. In input.json, set the mapdata UTM zone EPSG code. World is splitted into UTM zones. For US, it goes from UTM zone 10N on West coast (EPSG : 32610) to UTM zone 19N on East coast (EPSG : 32619).	
@@ -33,6 +30,10 @@ network file (.csv) must reference antenna and propagation model defined in inpu
 1. Build your csv filr, based on network_metric.csv sample
 2. In input.json, set the EPSG code you are using. It must correspond to a UTM zone (32610, 32611, ...)
 3. Run client_simulation.py
+
+# Get results
+By default, results are downloaded and copied locally in the folder ScriptResults.
+You will find one geotiff file per output (best signal, best server, ...), and one folder with per transmitter prediction results if you activated the option -p in the command line.
 
 # You have run simulation through Siradel Web Services client and want to go further from the API ?
 If you have run first simulations from the client, and want to retrieved your results and go further, you have to move on the steps below.
