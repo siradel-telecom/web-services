@@ -6,7 +6,6 @@
     "publicPrediction": false,
     "url": "URL",
     "clientId": "CLIENTID",
-    "clientSecret": "CLIENTSECRET",
     "username": "USERNAME",
     "password": "PASSWORD"
   },
