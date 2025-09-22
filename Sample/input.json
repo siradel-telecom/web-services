@@ -9,23 +9,15 @@
     "username": "USERNAME",
     "password": "PASSWORD"
   },
-  "mapdata": [
-    {
-      "name": "seattleMapdata3DTWorld",
-      "type": "3DTWorld",
-      "epsgSrid": 32610
-    }
-  ],
   "session": {
-    "name": "session_sample_SaaS",
+    "name": "test 1",
     "description": "SaaS sample description"
   },
   "models": [
     {
-      "name": "propagLR",
+      "name": "Fixed Wireless Access",
       "description": "generic model",
-      "type": "3DTWorld",
-      "mapdataName": "seattleMapdata3DTWorld"
+      "type": "3DTWorld"
     }
   ],
   "predictionSettings": {
@@ -42,8 +34,8 @@
   },
   "antennas": [
     {
-      "name": "Dir_H68_V7_tilt4_PolV_19dBi",
-      "antennaFile": "./Dir_H68_V7_tilt4_PolV_19dBi.xml"
+      "name": "Tarana_BN_3GHz_Compact_R0",
+      "antennaFile": "./Tarana_BN_3GHz_Compact_R0.xml"
     }
   ],
   "predictionGroupFilteringZone": {

@@ -152,7 +152,6 @@ SHAPE_FILE_EXT_OPTIONAL_XML = ".shp.xml"
 
 SESSION_UUID = uuid.uuid4()
 SIMULATION_UUID = uuid.uuid4()
-MAPDATA_MAP = {}
 ANTENNA_MAP = {}
 MODEL_MAP = {}
 ACCESS_TOKEN = None
@@ -532,90 +531,11 @@ def fill_base_station(network: dict, computation_type: str, session_uuid: uuid.U
     return base_station
 
 
-def create_mapdatas(mapdata_list: list, authentication_data: Optional[dict],
-                    server: str, logger: logging.Logger) -> dict:
-    """
-    @summary: Create mapdatas from list
-    @param mapdata_list: {list} list of mapdata
-    @param authentication_data: {dict} authentication data
-    @param server: {str} server url
-    @param logger: {logging.Logger} used to trace output log
-    @return mapdata_dict: {dict} dict of mapdata
-    """
-    logger.info("Creation mapdata")
-
-    # Validate mapdatas
-    validate_mapdatas(mapdata_list, logger)
-
-    # Create mapdatas
-    mapdata_dict = {}
-    for mapdata in mapdata_list:
-        mapdata["uuid"] = str(uuid.uuid4())
-        mapdata["sridEpsg"] = mapdata["epsgSrid"]
-        mapdata.pop("epsgSrid", None)
-        # Check name mapData
-        res = call_request("GET", f"{server}mapdata/{mapdata['uuid']}", authentication_data, logger)
-        result_get = res.json()
-        if res.status_code == 200:
-            logger.warning("Mapdata uuid already exists")
-        # POST mapdata to server
-        result_post = call_request("POST", get_resource_uri(server, "mapdata", authentication_data),
-                                   authentication_data, logger, json_content=mapdata).json()
-        handle_create_mapdata_result(result_get, result_post, mapdata, logger)
-        mapdata_dict[mapdata[NAME]] = result_post["uuid"]
-    return mapdata_dict
-
-
-def validate_mapdatas(mapdata_list: list, logger: logging.Logger) -> None:
-    """
-    @summary: Validate mapdatas from list
-    @param mapdata_list: {list} list of mapdata
-    @param logger: {logging.Logger} used to trace output log
-    """
-    mapdata_validated: Union[list, dict] = {}
-    for mapdata in mapdata_list:
-        if mapdata[NAME] in mapdata_validated \
-                and mapdata_validated[mapdata[NAME]] != sorting_json(mapdata):
-            logger.error("Error mapdata %s : %s", mapdata[NAME],
-                         "two mapdatas have the same name but different contents")
-            sys.exit(errno.EINVAL)
-        else:
-            mapdata_validated[mapdata[NAME]] = sorting_json(mapdata)
-
-
-def handle_create_mapdata_result(result_get: dict, result_post: dict, mapdata: dict,
-                                 logger: logging.Logger) -> None:
-    """
-    @summary: Handle the result returned by the mapdata creation api call
-    @param result_get: {dict} result of get call api
-    @param result_post: {dict} result of post call api
-    @param mapdata: {dict} mapdata object
-    @param logger: {logging.Logger} used to trace output log
-    """
-    if "status" in result_post.keys() and result_post["status"] != 201:
-        if "layers" in result_get.keys() and mapdata["layers"] != result_get["layers"]:
-            logger.error(
-                "The process failed due to a difference between the path in the mapdata "
-                "of the input.json file and the mapdata saved in the API")
-            layer_index = 0
-            for layer in result_get["layers"]:
-                if len(mapdata["layers"]) > layer_index and layer != mapdata["layers"][layer_index]:
-                    logger.error("Mapdata layer saved in the API: %s", str(layer))
-                    logger.error("Mapdata layer of the input.json: %s",
-                                 str(mapdata["layers"][layer_index]))
-                layer_index += 1
-            sys.exit(errno.EINVAL)
-        elif result_post["status"] != 406:
-            logger.error("Error mapdata %s : %s", mapdata[NAME], get_error_message(result_post))
-            sys.exit(errno.EINVAL)
-
-
-def create_model(model_list: list, mapdata_dict: dict, session_uuid: uuid.UUID,
+def create_model(model_list: list, session_uuid: uuid.UUID,
                  authentication_data: Optional[dict], server: str, logger: logging.Logger) -> dict:
     """
     @summary: Create a model
     @param model_list: {list} list of model
-    @param mapdata_dict: {dict} dict of mapdata
     @param session_uuid: {uuid.UUID} uuid of the current session
     @param authentication_data: {dict} authentication data
     @param server: {str} server url
@@ -626,10 +546,6 @@ def create_model(model_list: list, mapdata_dict: dict, session_uuid: uuid.UUID,
     model_dict = {}
     for model in model_list:
         model["uuid"] = str(uuid.uuid4())
-        if "mapdataName" in model:
-            model["mapdataUuid"] = get_resource_uuid_from_cache("Mapdata", mapdata_dict,
-                                                                model["mapdataName"], logger)
-            del model["mapdataName"]
         model["sessionUuid"] = str(session_uuid)
 
         result = None
@@ -1515,8 +1431,6 @@ if __name__ == "__main__":
     new_network_list = create_network_list(json_input_file["predictionSettings"]["networkFile"], LOGGER)
 
     # Functions call
-    MAPDATA_MAP = create_mapdatas(json_input_file["mapdata"], AUTHENTICATION, server_url, LOGGER)
-
     ANTENNA_MAP = create_antennas(json_input_file["antennas"], AUTHENTICATION, server_url, LOGGER)
 
     if get_computation_type(json_input_file) == SINR5G and "gob" in json_input_file.keys():
@@ -1525,7 +1439,7 @@ if __name__ == "__main__":
 
     create_session(json_input_file["session"], SESSION_UUID, AUTHENTICATION, server_url, LOGGER)
 
-    MODEL_MAP = create_model(json_input_file["models"], MAPDATA_MAP, SESSION_UUID,
+    MODEL_MAP = create_model(json_input_file["models"], SESSION_UUID,
                              AUTHENTICATION, server_url, LOGGER)
 
     # output Path : sessionName/date/networkFileName
