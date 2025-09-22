@@ -1,5 +1,2 @@
-transmitter id;transmitter name;transmitter easting;transmitter northing;transmitter height;azimuth;downtilt;frequency;antenna;propagation model;calculation resolution;calculation radius;emitting power;comments
-1;tx1;550097;5272898;10;0;1;900;Dir_H68_V7_tilt4_PolV_19dBi;propagLR;10;2000;0;
-2;tx2;552648;5276135;10;0;1;900;Dir_H68_V7_tilt4_PolV_19dBi;propagLR;10;2000;0;
-3;tx3;548109;5276173;10;0;1;900;Dir_H68_V7_tilt4_PolV_19dBi;propagLR;10;2000;0;
-4;tx4;551815;5269760;10;0;1;900;Dir_H68_V7_tilt4_PolV_19dBi;propagLR;10;2000;0;
+transmitter id;transmitter name;transmitter longitude;transmitter latitude;transmitter height;azimuth;downtilt;frequency;antenna;propagation model;calculation resolution;calculation radius;emitting power;comments
+1;tx1;-122.294;47.05289;25;0;1;3600;Tarana_BN_3GHz_Compact_R0;Fixed Wireless Access;10;10000;0;
