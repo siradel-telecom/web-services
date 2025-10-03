@@ -154,6 +154,17 @@ FIXED_WIRELESS_ACCESS = "fixed wireless access"
 MOBILITY = "mobility"
 PUBLIC_MODELS_NAME = [FIXED_WIRELESS_ACCESS, MOBILITY]
 
+TARANA_BN_3GHZ_COMPACT_R0 = "tarana-bn-3ghz-compact-r0"
+TARANA_BN_5GHZ_R1 = "tarana-bn-5ghz-r1"
+TARANA_BN_6GHZ_R2 = "tarana-bn-6ghz-r2"
+TARANA_BN_6GHZ_X2_R2 = "tarana-bn-6ghz-x2-r2"
+PUBLIC_ANTENNAS_NAME = [
+    TARANA_BN_3GHZ_COMPACT_R0,
+    TARANA_BN_5GHZ_R1,
+    TARANA_BN_6GHZ_R2,
+    TARANA_BN_6GHZ_X2_R2
+]
+
 SESSION_UUID = uuid.uuid4()
 SIMULATION_UUID = uuid.uuid4()
 ANTENNA_MAP = {}
@@ -359,7 +370,28 @@ def create_antennas(antenna_list: list, authentication_data: Optional[dict], ser
                     logger.error("Error antenna %s : %s",
                                  antenna[NAME], get_error_message(result))
                     sys.exit(errno.EINVAL)
-            antenna_dict[antenna[NAME]] = result["uuid"]
+            antenna_dict[antenna[NAME].lower()] = result["uuid"]
+    return antenna_dict
+
+
+def add_public_antennas(antenna_dict: dict, authentication_data: Optional[dict],
+                      server: str, logger: logging.Logger) -> dict:
+    """
+    @summary: Add public antennas to antenna dictionary
+    @param antenna_dict: {dict} initial antenna dictionary
+    @param authentication_data: {dict} authentication data
+    @param server: {str} server url
+    @param logger: {logging.Logger} used to trace output log
+    @return antenna_dict: {dict} dict of antennas with public antennas
+    """
+    logger.info("Add public antennas")
+    public_antennas_list = call_request("GET", f"{server}antennas",
+                                      authentication_data, logger).json()
+    public_antennas = [antenna for antenna in public_antennas_list
+                     if antenna[NAME].lower() in PUBLIC_ANTENNAS_NAME]
+
+    for public_antenna in public_antennas:
+        antenna_dict[public_antenna[NAME].lower()] = public_antenna["uuid"]
     return antenna_dict
 
 
@@ -371,6 +403,12 @@ def validate_antennas(antenna_list: list, logger: logging.Logger) -> None:
     """
     antenna_validated: Union[list, dict] = {}
     for antenna in antenna_list:
+        if antenna[NAME].lower() in PUBLIC_ANTENNAS_NAME:
+            logger.error(
+                "The antenna %s cannot take the name of one of the public antennas %s.",
+                antenna[NAME], PUBLIC_ANTENNAS_NAME
+            )
+            sys.exit(errno.EINVAL)
         if antenna[NAME] in antenna_validated \
                 and antenna_validated[antenna[NAME]] != sorting_json(antenna):
             logger.error("Error antenna %s : %s", antenna[NAME],
@@ -400,7 +438,7 @@ def create_gobs(gob_list: list, antenna_dict: dict, authentication_data: Optiona
     for gob in gob_list:
         gob["uuid"] = str(uuid.uuid4())
         for beam in gob["beams"]:
-            beam["uuid"] = get_resource_uuid_from_cache("Antenna", antenna_dict, beam[NAME], logger)
+            beam["uuid"] = get_resource_uuid_from_cache("Antenna", antenna_dict, beam[NAME].lower(), logger)
 
         res = call_request("POST", get_resource_uri(server, "antennas/gob", authentication_data),
                            authentication_data, logger, json_content=gob)
@@ -483,7 +521,7 @@ def fill_base_station(network: dict, computation_type: str, session_uuid: uuid.U
     if NetworkFields.ANTENNA in network.keys() and network.get(NetworkFields.ANTENNA):
         antenna_name = get_from_dict(network, NetworkFields.ANTENNA)
         base_station["antennaUuid"] = get_resource_uuid_from_cache("Antenna", antenna_dict,
-                                                                   antenna_name, logger)
+                                                                   antenna_name.lower(), logger)
 
 
     if computation_type in (SINR5G, SINR4G):
@@ -492,10 +530,10 @@ def fill_base_station(network: dict, computation_type: str, session_uuid: uuid.U
         if computation_type == SINR5G:
             antenna_ssb_name = get_from_dict(network, NetworkFields.ANTENNA_SSB)
             base_station["antennaSsbUuid"] = get_resource_uuid_from_cache("Antenna", antenna_dict,
-                                                                          antenna_ssb_name, logger)
+                                                                          antenna_ssb_name.lower(), logger)
             antenna_csi_name = get_from_dict(network, NetworkFields.ANTENNA_CSI)
             base_station["antennaCsiUuid"] = get_resource_uuid_from_cache("Antenna", antenna_dict,
-                                                                          antenna_csi_name, logger)
+                                                                          antenna_csi_name.lower(), logger)
         if computation_type == SINR4G:
             mandatory_advanced_sinr_fields = [NetworkFields.EPRE_OFFSET_SS_VS_RS,
                                               NetworkFields.EPRE_OFFSET_PBCH_VS_RS,
@@ -1084,7 +1122,7 @@ def fill_user_equipment(network: dict, session_uuid: uuid.UUID, data_dict: dict,
         if network.get(NetworkFields.RECEIVER_ANTENNA):
             user_equipment["antenna"] = get_from_dict(network, NetworkFields.RECEIVER_ANTENNA)
             user_equipment["antennaUuid"] = get_resource_uuid_from_cache("Antenna", antenna_dict,
-                                                                         user_equipment["antenna"], logger)
+                                                                         user_equipment["antenna"].lower(), logger)
             user_equipment["azimuth"] = get_from_dict(network, NetworkFields.RECEIVER_AZIMUTH, "0")
             user_equipment["downtilt"] = get_from_dict(network, NetworkFields.RECEIVER_DOWNTILT, "0")
     else:
@@ -1462,7 +1500,9 @@ if __name__ == "__main__":
     new_network_list = create_network_list(json_input_file["predictionSettings"]["networkFile"], LOGGER)
 
     # Functions call
-    ANTENNA_MAP = create_antennas(json_input_file["antennas"], AUTHENTICATION, server_url, LOGGER)
+    if "antennas" in json_input_file:
+        ANTENNA_MAP = create_antennas(json_input_file["antennas"], AUTHENTICATION, server_url, LOGGER)
+    ANTENNA_MAP = add_public_antennas(ANTENNA_MAP, AUTHENTICATION, server_url, LOGGER)
 
     if get_computation_type(json_input_file) == SINR5G and "gob" in json_input_file.keys():
         gob_dict = create_gobs(json_input_file["gob"], ANTENNA_MAP, AUTHENTICATION, server_url, LOGGER)
