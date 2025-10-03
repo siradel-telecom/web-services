@@ -13,7 +13,6 @@
     "name": "test 1",
     "description": "SaaS sample description"
   },
-  "models": [],
   "predictionSettings": {
     "networkFile": "./network_sample.csv",
     "predictionResultType": [
