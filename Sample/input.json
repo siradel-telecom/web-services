@@ -25,12 +25,6 @@
     "isotropic": false,
     "force": false
   },
-  "antennas": [
-    {
-      "name": "Tarana_BN_3GHz_Compact_R0",
-      "antennaFile": "./Tarana_BN_3GHz_Compact_R0.xml"
-    }
-  ],
   "predictionGroupFilteringZone": {
     "coordinates": {
       "xmin": null,

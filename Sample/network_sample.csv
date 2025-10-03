@@ -1,2 +1,2 @@
 transmitter id;transmitter name;transmitter longitude;transmitter latitude;transmitter height;azimuth;downtilt;frequency;antenna;propagation model;calculation resolution;calculation radius;emitting power;comments
-1;tx1;-122.294;47.05289;25;0;1;3600;Tarana_BN_3GHz_Compact_R0;Fixed Wireless Access;10;10000;0;
+1;tx1;-122.294;47.05289;25;0;1;3600;Tarana-BN-3GHz-Compact-R0;Fixed Wireless Access;10;10000;0;
