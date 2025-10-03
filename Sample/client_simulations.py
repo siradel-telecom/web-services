@@ -150,6 +150,10 @@ SHAPE_FILE_EXT_OPTIONAL = [".prj", ".sbn", ".sbx", ".fbn", ".fbx", ".ain", ".aih
                            ".mxs", ".atx", ".cpg", ".qix", ".qmd"]
 SHAPE_FILE_EXT_OPTIONAL_XML = ".shp.xml"
 
+FIXED_WIRELESS_ACCESS = "fixed wireless access"
+MOBILITY = "mobility"
+PUBLIC_MODELS_NAME = [FIXED_WIRELESS_ACCESS, MOBILITY]
+
 SESSION_UUID = uuid.uuid4()
 SIMULATION_UUID = uuid.uuid4()
 ANTENNA_MAP = {}
@@ -545,6 +549,12 @@ def create_model(model_list: list, session_uuid: uuid.UUID,
     logger.info("Creation model")
     model_dict = {}
     for model in model_list:
+        if model[NAME].lower() in PUBLIC_MODELS_NAME:
+            logger.error(
+                "The model %s cannot take the name of one of the public models %s.",
+                model[NAME], PUBLIC_MODELS_NAME
+            )
+            sys.exit(errno.EINVAL)
         model["uuid"] = str(uuid.uuid4())
         model["sessionUuid"] = str(session_uuid)
 
@@ -569,7 +579,28 @@ def create_model(model_list: list, session_uuid: uuid.UUID,
             logger.error("Error model %s : %s", model[NAME], get_error_message(result))
             sys.exit(errno.EINVAL)
         model["uuid"] = result["uuid"]
-        model_dict[model[NAME]] = model["uuid"]
+        model_dict[model[NAME].lower()] = model["uuid"]
+    return model_dict
+
+
+def add_public_models(model_dict: dict, authentication_data: Optional[dict],
+                      server: str, logger: logging.Logger) -> dict:
+    """
+    @summary: Add public models to model dictionary
+    @param model_dict: {dict} initial model dictionary
+    @param authentication_data: {dict} authentication data
+    @param server: {str} server url
+    @param logger: {logging.Logger} used to trace output log
+    @return model_dict: {dict} dict of propagation models with public models
+    """
+    logger.info("Add public models")
+    public_models_list = call_request("GET", f"{server}propagationmodels",
+                                      authentication_data, logger).json()
+    public_models = [model for model in public_models_list
+                     if model["name"].lower() in PUBLIC_MODELS_NAME and model["type"] is None]
+    
+    for public_model in public_models:
+        model_dict[public_model[NAME].lower()] = public_model["uuid"]
     return model_dict
 
 
@@ -1234,7 +1265,7 @@ def create_propagation_request(network_list: list, settings: dict, session_uuid:
         # fill propagation model uuid
         model_name = get_from_dict(network, NetworkFields.PROPAGATION_MODEL)
         model_uuid = get_resource_uuid_from_cache("PropagationModel", models,
-                                                  model_name, logger)
+                                                  model_name.lower(), logger)
 
         already_exist = False
         for propagation in propagation_list:
@@ -1441,6 +1472,7 @@ if __name__ == "__main__":
 
     MODEL_MAP = create_model(json_input_file["models"], SESSION_UUID,
                              AUTHENTICATION, server_url, LOGGER)
+    MODEL_MAP = add_public_models(MODEL_MAP, AUTHENTICATION, server_url, LOGGER)
 
     # output Path : sessionName/date/networkFileName
     output_directory_path = json_input_file["outputPath"] \
