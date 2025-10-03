@@ -13,13 +13,7 @@
     "name": "test 1",
     "description": "SaaS sample description"
   },
-  "models": [
-    {
-      "name": "Fixed Wireless Access",
-      "description": "generic model",
-      "type": "3DTWorld"
-    }
-  ],
+  "models": [],
   "predictionSettings": {
     "networkFile": "./network_sample.csv",
     "predictionResultType": [

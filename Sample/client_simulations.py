@@ -1470,8 +1470,9 @@ if __name__ == "__main__":
 
     create_session(json_input_file["session"], SESSION_UUID, AUTHENTICATION, server_url, LOGGER)
 
-    MODEL_MAP = create_model(json_input_file["models"], SESSION_UUID,
-                             AUTHENTICATION, server_url, LOGGER)
+    if "models" in json_input_file:
+        MODEL_MAP = create_model(json_input_file["models"], SESSION_UUID,
+                                 AUTHENTICATION, server_url, LOGGER)
     MODEL_MAP = add_public_models(MODEL_MAP, AUTHENTICATION, server_url, LOGGER)
 
     # output Path : sessionName/date/networkFileName
