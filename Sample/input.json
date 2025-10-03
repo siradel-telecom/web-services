@@ -25,7 +25,6 @@
     "isotropic": false,
     "force": false
   },
-  "antennas": [],
   "predictionGroupFilteringZone": {
     "coordinates": {
       "xmin": null,
