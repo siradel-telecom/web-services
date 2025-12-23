@@ -311,6 +311,15 @@ def parse_args() -> argparse.Namespace:
         required=False
     )
 
+    parser.add_argument(
+        "-k", "--download-kmz",
+        help="Download postprocessing KMZ results",
+        dest="downloadKmz",
+        action="store_true",
+        default=False,
+        required=False
+    )
+
     args = parser.parse_args()
 
     if not args.inputFile:
@@ -907,6 +916,7 @@ def handle_pull_simulation_status_response(simulation_uuid: uuid.UUID,
 
 
 def download_simulation_results(output_path: str, file_name: str,
+                                download_kmz: bool, settings: dict,
                                 simulation_uuid: uuid.UUID,
                                 authentication_data: Optional[dict], server: str,
                                 download_server: str,
@@ -915,6 +925,8 @@ def download_simulation_results(output_path: str, file_name: str,
     @summary: Download the simulation results files
     @param output_path: {str} the path where to save the results files
     @param file_name: {str} the file name
+    @param download_kmz: {bool} indicates whether to download the results in KMZ format
+    @param settings: {dict} dictionary of settings
     @param simulation_uuid: {uuid.UUID} uuid of the simulation
     @param authentication_data: {dict} authentication data
     @param server: {str} server url
@@ -960,6 +972,46 @@ def download_simulation_results(output_path: str, file_name: str,
             os.makedirs(final_folder_path)
         with open(os.path.join(final_folder_path, name), "wb") as result_file:
             result_file.write(current_tiff.content)
+
+        if download_kmz:
+            # Retrieve kmz values from configuration if exists else default values
+            palette = settings["network"]["kmz"]["palette"] \
+                if "network" in settings.keys() \
+                   and "kmz" in settings["network"] \
+                   and "palette" in settings["network"]["kmz"] \
+                else "viridis"
+            min_value = settings["network"]["kmz"]["min"] \
+                if "network" in settings.keys() \
+                   and "kmz" in settings["network"] \
+                   and "min" in settings["network"]["kmz"] \
+                else -90
+            max_value = settings["network"]["kmz"]["max"] \
+                if "network" in settings.keys() \
+                   and "kmz" in settings["network"] \
+                   and "max" in settings["network"]["kmz"] \
+                else -65
+
+            # If it's a best signal result, then apply the min and max values to the KMZ output.
+            if result["type"] == "received_power":
+                current_kmz = call_request(
+                    "GET",
+                    f"{server}results/{str(result['uuid'])}/download/kmz/{palette}/min/{min_value}/max/{max_value}",
+                    authentication_data,
+                    logger
+                )
+            else:
+                current_kmz = call_request(
+                    "GET",
+                    f"{server}results/{str(result['uuid'])}/download/kmz/{palette}",
+                    authentication_data,
+                    logger
+                )
+            if current_kmz.status_code != 200:
+                logger.error("Error downloading KMZ %s", result["fileName"])
+                sys.exit(errno.EINVAL)
+            kmz_name = f"{name.rsplit('.', 1)[0]}.kmz"
+            with open(os.path.join(final_folder_path, kmz_name), "wb") as result_file_kmz:
+                result_file_kmz.write(current_kmz.content)
 
 
 def get_resource_uri(server: str, resource_type: str, authentication_data: Optional[dict]) -> str:
@@ -1533,6 +1585,7 @@ if __name__ == "__main__":
     end_simulation_computation_time = time.time()
 
     download_simulation_results(output_directory_path, new_file_name,
+                                arguments.downloadKmz, json_input_file,
                                 SIMULATION_UUID, AUTHENTICATION,
                                 server_url, download_url, LOGGER)
 

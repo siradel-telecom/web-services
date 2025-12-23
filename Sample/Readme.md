@@ -1,5 +1,5 @@
 # How to run the python client ?
-You can run python client through any python 3 environement.
+You can run python client through any python 3 environment.
 
 ## Build your csv file with network information
 Network file (.csv) must reference antenna and propagation model defined in input.json file
@@ -27,6 +27,7 @@ Propagation model and antenna used in network file must be configured in input.j
 # Get results
 By default, results are downloaded and copied locally in the folder ScriptResults.
 You will find one geotiff file per output (best signal, best server, ...), and one folder with per transmitter prediction results if you activated the option -p in the command line.
+You can download these results in KMZ format by adding the -k option.
 Geotiff include several code values.
 In order to display it properly with a GIS tool, you need to adjust the colorscale with expected range.
 
