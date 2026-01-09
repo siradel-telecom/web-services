@@ -46,7 +46,12 @@
       "ymax": null,
       "epsgCode": 4326
     },
-    "resolution": 10
+    "resolution": 10,
+    "kmz": {
+      "palette": "inferno",
+      "min": -90,
+      "max": -65
+    }
   },
   "outputPath": "./ScriptResult/"
 }
