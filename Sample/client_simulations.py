@@ -362,24 +362,31 @@ def create_antennas(antenna_list: list, authentication_data: Optional[dict], ser
 
     antenna_dict = {}
     for antenna in antenna_list:
-        antenna["uuid"] = str(uuid.uuid4())
-        antenna_filename = os.path.basename(antenna["antennaFile"])
-        with open(antenna["antennaFile"], "rb") as antenna_file:
-            multipart_form_data = [
-                (JSON_PARAM, (None, json.dumps(antenna), APPLICATION_JSON)),
-                (DATA_PARAM, (antenna_filename, antenna_file, TEXT_XML))
-            ]
-            res = call_request("POST", get_resource_uri(server, "antennas", authentication_data),
-                               authentication_data, logger, files=multipart_form_data)
-            result = res.json()
-            if res.status_code != 201:
-                if res.status_code == 202:
-                    logger.warning("Antenna name %s : already exist", antenna_filename)
-                else:
-                    logger.error("Error antenna %s : %s",
-                                 antenna[NAME], get_error_message(result))
-                    sys.exit(errno.EINVAL)
-            antenna_dict[antenna[NAME].lower()] = result["uuid"]
+        if "uuid" in antenna and antenna["uuid"]:
+            # If antenna already created (with uuid), add it to the antenna dictionary
+            antenna_dict[antenna[NAME].lower()] = antenna["uuid"]
+        else:
+            # Otherwise create the new antenna and add it to the antenna dictionary
+            antenna["uuid"] = str(uuid.uuid4())
+            antenna_filename = os.path.basename(antenna["antennaFile"])
+            with open(antenna["antennaFile"], "rb") as antenna_file:
+                multipart_form_data = [
+                    (JSON_PARAM, (None, json.dumps(antenna), APPLICATION_JSON)),
+                    (DATA_PARAM, (antenna_filename, antenna_file, TEXT_XML))
+                ]
+                res = call_request(
+                    "POST", get_resource_uri(server, "antennas", authentication_data),
+                    authentication_data, logger, files=multipart_form_data
+                )
+                result = res.json()
+                if res.status_code != 201:
+                    if res.status_code == 202:
+                        logger.warning("Antenna name %s : already exist", antenna_filename)
+                    else:
+                        logger.error("Error antenna %s : %s",
+                                    antenna[NAME], get_error_message(result))
+                        sys.exit(errno.EINVAL)
+                antenna_dict[antenna[NAME].lower()] = result["uuid"]
     return antenna_dict
 
 
@@ -602,31 +609,41 @@ def create_model(model_list: list, session_uuid: uuid.UUID,
                 model[NAME], PUBLIC_MODELS_NAME
             )
             sys.exit(errno.EINVAL)
-        model["uuid"] = str(uuid.uuid4())
-        model["sessionUuid"] = str(session_uuid)
+        if "uuid" in model and model["uuid"]:
+            # If model already created (with uuid), add it to the model dictionary
+            model_dict[model[NAME].lower()] = model["uuid"]
+        else:
+            # Otherwise create the new model and add it to the model dictionary
+            model["uuid"] = str(uuid.uuid4())
+            model["sessionUuid"] = str(session_uuid)
 
-        result = None
-        if "vxfFilePath" in model:
-            model_filename = os.path.basename(model["vxfFilePath"])
-            with open(model["vxfFilePath"], "rb") as vxf_file:
-                multipart_form_data = [
-                    (JSON_PARAM, (None, json.dumps(model), APPLICATION_JSON)),
-                    (DATA_PARAM, (model_filename, vxf_file))
-                ]
+            result = None
+            if "vxfFilePath" in model:
+                model_filename = os.path.basename(model["vxfFilePath"])
+                with open(model["vxfFilePath"], "rb") as vxf_file:
+                    multipart_form_data = [
+                        (JSON_PARAM, (None, json.dumps(model), APPLICATION_JSON)),
+                        (DATA_PARAM, (model_filename, vxf_file))
+                    ]
+                    result = call_request(
+                        "POST", get_resource_uri(server, "propagationmodels", authentication_data),
+                        authentication_data, logger, files=multipart_form_data).json()
+            if "type" in model:
                 result = call_request(
                     "POST", get_resource_uri(server, "propagationmodels", authentication_data),
-                    authentication_data, logger, files=multipart_form_data).json()
-        if "type" in model:
-            result = call_request("POST", get_resource_uri(server, "propagationmodels", authentication_data),
-                                  authentication_data, logger, json_content=model).json()
-        if result is None:
-            logger.error("Error model %s : there is no 'vxfFilePath' or 'type' key in this model", model[NAME])
-            sys.exit(errno.EINVAL)
-        if "status" in result.keys() and result["status"] != 406:
-            logger.error("Error model %s : %s", model[NAME], get_error_message(result))
-            sys.exit(errno.EINVAL)
-        model["uuid"] = result["uuid"]
-        model_dict[model[NAME].lower()] = model["uuid"]
+                    authentication_data, logger, json_content=model
+                ).json()
+            if result is None:
+                logger.error(
+                    "Error model %s : there is no 'vxfFilePath' or 'type' key in this model",
+                    model[NAME]
+                )
+                sys.exit(errno.EINVAL)
+            if "status" in result.keys() and result["status"] != 406:
+                logger.error("Error model %s : %s", model[NAME], get_error_message(result))
+                sys.exit(errno.EINVAL)
+            model["uuid"] = result["uuid"]
+            model_dict[model[NAME].lower()] = model["uuid"]
     return model_dict
 
 
