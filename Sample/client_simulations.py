@@ -1358,10 +1358,6 @@ def create_propagation_request(network_list: list, settings: dict, session_uuid:
     @param logger: {logging.Logger} used to trace output log
     @return: {list} the list of user equipments created
     """
-    if get_prediction_type(settings["predictionSettings"]) == "POINT":
-        logger.error("Cannot create POINT simulations")
-        sys.exit(errno.EINVAL)
-
     propagation_list: List[dict] = []
     for network in network_list:
         # fill base station
@@ -1399,7 +1395,6 @@ def create_propagation_request(network_list: list, settings: dict, session_uuid:
     new_propagation_request = {
         "propagationScenarios": propagation_list,
         "resultTypes": settings["predictionSettings"]["predictionResultType"],
-        "heights": settings["predictionSettings"]["receptionHeights"],
         "zmeaning": handle_zmeaning(settings["predictionSettings"], logger)
     }
     if "isotropic" in settings["predictionSettings"].keys():
