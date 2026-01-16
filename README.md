@@ -11,6 +11,18 @@ API documentation is published in a Postman environment
 https://docs.bloonetws.siradel.com
 
 # Sample codes
+
+## Jupyter Notebook sample
+A Jupyter notebook is available for you to perform point-to-point calculations and generate a matrix grouping the received power results between transmitters and receivers.  
+To launch this notebook, simply enter your credentials in the AUTHENTICATION constant and launch the notebook cells.  
+A user interface allowing you to enter the calculation elements is displayed in the last cell of the Notebook :
+1. Select a list of transmitters in CSV format (see transmitters.csv for field details).
+2. Select a list of receivers in CSV format (see receivers.csv for field details).
+3. Select a propagation model to use from the public models provided.
+4. Select an antenna to use from the public antennas provided.
+5. Click on the “Start the calculation” button.
+
+## Python sample
 You can find an API integration sample code in python.
 To ease the usage, this integration summarized inputs into two files : input.json and a network.csv file
 1. Request API access to contact@siradel.com
