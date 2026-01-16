@@ -12,6 +12,14 @@ https://docs.bloonetws.siradel.com
 
 # Sample codes
 
+## ESRI Notebook sample
+A Jupyter Notebook file (EsriBloonetNotebookSample.ipynb) that describes a sample Bloonet coverage calculation associated with an ArcGIS Online.  
+This script communicates with the Bloonet API to launch the coverage calculations and imports the results into an ArcGIS Web Map provided as input.  
+1. Import the Notebook into an ArcGIS Online environment
+2. Create a web map in ArcGIS containing a feature layer representing transmitters built from the seattle-network.csv CSV file
+3. Launch the Notebook by indicating as input the name of the previously created Web Map and the propagation model and antenna used
+4. At the end of the Notebook execution, check that the Web Map contains two new raster layers: best signal and best server
+
 ## Jupyter Notebook sample
 A Jupyter notebook is available for you to perform point-to-point calculations and generate a matrix grouping the received power results between transmitters and receivers.  
 To launch this notebook, simply enter your credentials in the AUTHENTICATION constant and launch the notebook cells.  
