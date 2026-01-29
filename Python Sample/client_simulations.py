@@ -192,7 +192,7 @@ def get_script_information(logger: logging.Logger) -> None:
     logger.info("* Software name: client.py")
     logger.info(f"* Version: {SCRIPT_VERSION}")
     logger.info(f"* Date: {LAST_DATE_MODIF}")
-    logger.info("* Editor: SIRADEL-ENGIE")
+    logger.info("* Editor: SIRADEL")
 
 
 def get_computation_type(data_dict: dict) -> str:
