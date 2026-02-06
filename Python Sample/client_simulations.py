@@ -2,8 +2,8 @@
 Author: SIRADEL
 Copyright: Copyright (C) 2025 SIRADEL
 License: Private Domain
-Date: 08-09-2025
-Version: 2.9.0.0
+Date: 06-02-2026
+Version: 2.10.3.0
 
 Description: Module used to launch simulation calculations
 Options: -h provide all options available, -i Json input file
@@ -27,8 +27,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Union, List, Optional, cast, Any
 
-SCRIPT_VERSION = "2.9.0.0"
-LAST_DATE_MODIF = "08-09-2025"
+SCRIPT_VERSION = "2.10.3.0"
+LAST_DATE_MODIF = "06-02-2026"
 
 
 class NetworkFields(str, Enum):
@@ -934,6 +934,7 @@ def handle_pull_simulation_status_response(simulation_uuid: uuid.UUID,
 
 def download_simulation_results(output_path: str, file_name: str,
                                 download_kmz: bool, settings: dict,
+                                network_list: list,
                                 simulation_uuid: uuid.UUID,
                                 authentication_data: Optional[dict], server: str,
                                 download_server: str,
@@ -944,6 +945,7 @@ def download_simulation_results(output_path: str, file_name: str,
     @param file_name: {str} the file name
     @param download_kmz: {bool} indicates whether to download the results in KMZ format
     @param settings: {dict} dictionary of settings
+    @param network_list: {dict} list of network datas
     @param simulation_uuid: {uuid.UUID} uuid of the simulation
     @param authentication_data: {dict} authentication data
     @param server: {str} server url
@@ -997,29 +999,35 @@ def download_simulation_results(output_path: str, file_name: str,
                    and "kmz" in settings["network"] \
                    and "palette" in settings["network"]["kmz"] \
                 else "viridis"
-            min_value = settings["network"]["kmz"]["min"] \
-                if "network" in settings.keys() \
-                   and "kmz" in settings["network"] \
-                   and "min" in settings["network"]["kmz"] \
-                else -90
-            max_value = settings["network"]["kmz"]["max"] \
-                if "network" in settings.keys() \
-                   and "kmz" in settings["network"] \
-                   and "max" in settings["network"]["kmz"] \
-                else -65
 
             # If it's a best signal result, then apply the min and max values to the KMZ output.
             if result["type"] == "received_power":
+                min_value = settings["network"]["kmz"]["min"] \
+                    if "network" in settings.keys() \
+                       and "kmz" in settings["network"] \
+                       and "min" in settings["network"]["kmz"] \
+                    else -90
+                max_value = settings["network"]["kmz"]["max"] \
+                    if "network" in settings.keys() \
+                       and "kmz" in settings["network"] \
+                       and "max" in settings["network"]["kmz"] \
+                    else -65
                 current_kmz = call_request(
                     "GET",
-                    f"{server}results/{str(result['uuid'])}/download/kmz/{palette}/min/{min_value}/max/{max_value}",
+                    f"{download_server}results/{str(result['uuid'])}/download/kmz/{palette}/min/{min_value}/max/{max_value}",
                     authentication_data,
                     logger
                 )
             else:
+                min_value=0
+                max_value=0
+                for network in network_list:
+                    min_value = min(int(get_from_dict(network, NetworkFields.TRANSMITTER_ID)), min_value)
+                    max_value = max(int(get_from_dict(network, NetworkFields.TRANSMITTER_ID)), max_value)
+
                 current_kmz = call_request(
                     "GET",
-                    f"{server}results/{str(result['uuid'])}/download/kmz/{palette}",
+                    f"{download_server}results/{str(result['uuid'])}/download/kmz/{palette}/min/{min_value}/max/{max_value}",
                     authentication_data,
                     logger
                 )
@@ -1598,7 +1606,7 @@ if __name__ == "__main__":
 
     download_simulation_results(output_directory_path, new_file_name,
                                 arguments.downloadKmz, json_input_file,
-                                SIMULATION_UUID, AUTHENTICATION,
+                                new_network_list, SIMULATION_UUID, AUTHENTICATION,
                                 server_url, download_url, LOGGER)
 
     end_simulation_execution_time = time.time()
