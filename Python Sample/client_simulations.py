@@ -25,6 +25,7 @@ import uuid
 from enum import Enum
 from pathlib import Path
 from typing import Union, List, Optional, cast, Any
+from packaging import version
 import requests
 
 SCRIPT_VERSION = "2.10.3.0"
@@ -326,6 +327,24 @@ def parse_args() -> argparse.Namespace:
         parser.print_usage()
         sys.exit(2)
     return args
+
+
+def check_client_server_version_compatibility(authentication_data: Optional[dict], server: str,
+                                              logger: logging.Logger) -> None:
+    """
+    @summary: Check client/server version compatibility
+    @param authentication_data: {dict} authentication data
+    @param server: {str} server url
+    @param logger: {logging.Logger} used to trace output log
+    """
+    res = call_request("GET", f"{server}index", authentication_data, logger).json()
+    complete_server_version = res["application"]["version"]
+    server_version = complete_server_version.split("-")[0]
+    if version.parse(SCRIPT_VERSION) != version.parse(server_version):
+        logger.warning(
+            "Warning: the client version %s is not the same as the server version %s.",
+            SCRIPT_VERSION, server_version
+        )
 
 
 def get_resource_uuid_from_cache(resource_type: str, resource_cache: dict, resource_name: str,
@@ -1616,6 +1635,8 @@ if __name__ == "__main__":
 
     if 'authentication' in json_input_file.keys():
         AUTHENTICATION = json_input_file["authentication"]
+
+    check_client_server_version_compatibility(AUTHENTICATION, server_url, LOGGER)
 
     new_network_list = create_network_list(
         json_input_file["predictionSettings"]["networkFile"], LOGGER)
