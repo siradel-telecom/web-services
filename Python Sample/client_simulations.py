@@ -19,13 +19,13 @@ import math
 import os
 import re
 import zipfile
-import requests
 import sys
 import time
 import uuid
 from enum import Enum
 from pathlib import Path
 from typing import Union, List, Optional, cast, Any
+import requests
 
 SCRIPT_VERSION = "2.10.3.0"
 LAST_DATE_MODIF = "06-02-2026"
@@ -454,10 +454,14 @@ def create_gobs(gob_list: list, antenna_dict: dict, authentication_data: Optiona
     for gob in gob_list:
         gob["uuid"] = str(uuid.uuid4())
         for beam in gob["beams"]:
-            beam["uuid"] = get_resource_uuid_from_cache("Antenna", antenna_dict, beam[NAME].lower(), logger)
+            beam["uuid"] = get_resource_uuid_from_cache(
+                "Antenna", antenna_dict, beam[NAME].lower(), logger)
 
-        res = call_request("POST", get_resource_uri(server, "antennas/gob", authentication_data),
-                           authentication_data, logger, json_content=gob)
+        res = call_request(
+            "POST",
+            get_resource_uri(server, "antennas/gob", authentication_data),
+            authentication_data, logger, json_content=gob
+        )
 
         result = res.json()
         if res.status_code != 201:
@@ -508,9 +512,11 @@ def fill_base_station(network: dict, computation_type: str, session_uuid: uuid.U
                                        and NetworkFields.TRANSMITTER_LATITUDE in network)
     base_station = {
         "x": get_float_from_dict(network, NetworkFields.TRANSMITTER_LONGITUDE)
-        if transmitter_long_lat_coordinate else get_float_from_dict(network, NetworkFields.TRANSMITTER_EASTING),
+        if transmitter_long_lat_coordinate
+        else get_float_from_dict(network, NetworkFields.TRANSMITTER_EASTING),
         "y": get_float_from_dict(network, NetworkFields.TRANSMITTER_LATITUDE)
-        if transmitter_long_lat_coordinate else get_float_from_dict(network, NetworkFields.TRANSMITTER_NORTHING),
+        if transmitter_long_lat_coordinate
+        else get_float_from_dict(network, NetworkFields.TRANSMITTER_NORTHING),
         "z": get_float_from_dict(network, NetworkFields.TRANSMITTER_HEIGHT),
         "epsgCode": 4326 if transmitter_long_lat_coordinate else None,
         "zmeaning": "ZMEANING_GROUND",
@@ -529,7 +535,8 @@ def fill_base_station(network: dict, computation_type: str, session_uuid: uuid.U
             get_float_from_dict(network, NetworkFields.ADDITIONAL_ELECTRICAL_DOWNTILT, 0)
 
     # check terrain altitude
-    if NetworkFields.TERRAIN_ALTITUDE in network.keys() and network.get(NetworkFields.TERRAIN_ALTITUDE):
+    if (NetworkFields.TERRAIN_ALTITUDE in network.keys()
+            and network.get(NetworkFields.TERRAIN_ALTITUDE)):
         base_station["zmeaning"] = "ZMEANING_ALTITUDE"
         base_station["z"] = (get_float_from_dict(network, NetworkFields.TRANSMITTER_HEIGHT)
                              + get_float_from_dict(network, NetworkFields.TERRAIN_ALTITUDE))
@@ -545,11 +552,11 @@ def fill_base_station(network: dict, computation_type: str, session_uuid: uuid.U
         base_station["trafficload"] = get_from_dict(network, NetworkFields.TRAFFICLOAD, "0")
         if computation_type == SINR5G:
             antenna_ssb_name = get_from_dict(network, NetworkFields.ANTENNA_SSB)
-            base_station["antennaSsbUuid"] = get_resource_uuid_from_cache("Antenna", antenna_dict,
-                                                                          antenna_ssb_name.lower(), logger)
+            base_station["antennaSsbUuid"] = get_resource_uuid_from_cache(
+                "Antenna", antenna_dict, antenna_ssb_name.lower(), logger)
             antenna_csi_name = get_from_dict(network, NetworkFields.ANTENNA_CSI)
-            base_station["antennaCsiUuid"] = get_resource_uuid_from_cache("Antenna", antenna_dict,
-                                                                          antenna_csi_name.lower(), logger)
+            base_station["antennaCsiUuid"] = get_resource_uuid_from_cache(
+                "Antenna", antenna_dict, antenna_csi_name.lower(), logger)
         if computation_type == SINR4G:
             mandatory_advanced_sinr_fields = [NetworkFields.EPRE_OFFSET_SS_VS_RS,
                                               NetworkFields.EPRE_OFFSET_PBCH_VS_RS,
@@ -557,7 +564,8 @@ def fill_base_station(network: dict, computation_type: str, session_uuid: uuid.U
                                               NetworkFields.EPRE_OFFSET_PDSCH_VS_RS,
                                               NetworkFields.NB_ANTENNA_PORTS]
             found_advanced_sinr_fields = \
-                list(x in network.keys() and network.get(x) != '' for x in mandatory_advanced_sinr_fields)
+                list(x in network.keys() and network.get(x) != ''
+                     for x in mandatory_advanced_sinr_fields)
             if all(found_advanced_sinr_fields):
                 base_station["epreOffsetSSVSRS"] = \
                     get_from_dict(network, NetworkFields.EPRE_OFFSET_SS_VS_RS)
@@ -662,7 +670,7 @@ def add_public_models(model_dict: dict, authentication_data: Optional[dict],
                                       authentication_data, logger).json()
     public_models = [model for model in public_models_list
                      if model["name"].lower() in PUBLIC_MODELS_NAME and model["type"] is None]
-    
+
     for public_model in public_models:
         model_dict[public_model[NAME].lower()] = public_model["uuid"]
     return model_dict
@@ -735,16 +743,19 @@ def create_network_list(network_file_path: str, logger: logging.Logger) -> list:
             logger.error("Missing mandatory field(s) in network file: %s",
                          ', '.join(missing_headers))
             sys.exit(errno.EINVAL)
-        # Check if tuple "transmitters easting"/"transmitter northing" or "longitude"/"latitude" is present in headers
-        long_lat_coordinates = NetworkFields.TRANSMITTER_LONGITUDE in valid_headers \
-                               and NetworkFields.TRANSMITTER_LATITUDE in valid_headers \
-                               and NetworkFields.TRANSMITTER_EASTING not in valid_headers \
-                               and NetworkFields.TRANSMITTER_NORTHING not in valid_headers
-        easting_northing_coordinates = NetworkFields.TRANSMITTER_EASTING in valid_headers \
-                                       and NetworkFields.TRANSMITTER_NORTHING in valid_headers \
-                                       and NetworkFields.TRANSMITTER_LONGITUDE not in valid_headers \
-                                       and NetworkFields.TRANSMITTER_LATITUDE not in valid_headers
-        if not (long_lat_coordinates ^ easting_northing_coordinates):
+        # Check if tuple "transmitters easting"/"transmitter northing"
+        # or "longitude"/"latitude" is present in headers
+        long_lat_coordinates = \
+            NetworkFields.TRANSMITTER_LONGITUDE in valid_headers \
+            and NetworkFields.TRANSMITTER_LATITUDE in valid_headers \
+            and NetworkFields.TRANSMITTER_EASTING not in valid_headers \
+            and NetworkFields.TRANSMITTER_NORTHING not in valid_headers
+        easting_northing_coordinates = \
+            NetworkFields.TRANSMITTER_EASTING in valid_headers \
+            and NetworkFields.TRANSMITTER_NORTHING in valid_headers \
+            and NetworkFields.TRANSMITTER_LONGITUDE not in valid_headers \
+            and NetworkFields.TRANSMITTER_LATITUDE not in valid_headers
+        if not long_lat_coordinates ^ easting_northing_coordinates:
             logger.error(
                 "Tuple 'transmitters easting'/'transmitter northing' "
                 "or 'longitude'/'latitude' must be present in headers"
@@ -771,53 +782,60 @@ def create_network_list(network_file_path: str, logger: logging.Logger) -> list:
     return network_list
 
 
-def create_post_processing_request(json_input_file: dict, logger: logging.Logger) -> dict | None:
+def create_post_processing_request(json_input: dict, logger: logging.Logger) -> dict | None:
     """
     @summary: Create post processing request
-    @param json_input_file: {dict} post processing settings
+    @param json_input: {dict} post processing settings
     @param logger: {logging.Logger} used to trace output log
     @return: {dict} post processing request object
     """
     new_postprocessing_request = None
 
-    if "network" in json_input_file.keys():
-        if get_prediction_type(json_input_file["predictionSettings"]) == "POINT":
+    if "network" in json_input.keys():
+        if get_prediction_type(json_input["predictionSettings"]) == "POINT":
             logger.warning("Post processing calculation ignored: "
                            "All predictions must be of type AREA")
         else:
-            postprocessing_settings = json_input_file["network"]
+            postprocessing_settings = json_input["network"]
             new_postprocessing_request = {
                 "resolution": postprocessing_settings["resolution"],
                 "computationType": postprocessing_settings["computationType"],
                 "resultTypes": postprocessing_settings["computationResultType"]
             }
             if "dynamicParameters" in postprocessing_settings.keys():
-                new_postprocessing_request["dynamicParameters"] = postprocessing_settings["dynamicParameters"]
+                new_postprocessing_request["dynamicParameters"] = \
+                    postprocessing_settings["dynamicParameters"]
 
             if "repeaterSeparated" in postprocessing_settings.keys():
-                new_postprocessing_request["repeaterSeparated"] = postprocessing_settings["repeaterSeparated"]
+                new_postprocessing_request["repeaterSeparated"] = \
+                    postprocessing_settings["repeaterSeparated"]
 
             if COMPUTATION_ZONE in postprocessing_settings.keys():
-                new_postprocessing_request[COMPUTATION_ZONE] = postprocessing_settings[COMPUTATION_ZONE]
+                new_postprocessing_request[COMPUTATION_ZONE] = \
+                    postprocessing_settings[COMPUTATION_ZONE]
 
     return new_postprocessing_request
 
 
-def create_shapefile(json_input_file: dict) -> tuple | None:
+def create_shapefile(json_input: dict) -> tuple | None:
     """
     @summary: Create shapefile multipart section for post processing request
-    @param json_input_file: {dict} dictionary of settings for post processing
+    @param json_input: {dict} dictionary of settings for post processing
     @return: {tuple | None} shapefile multipart section or None if no shapefile
     """
     new_shapefile = None
-    if "network" in json_input_file.keys() \
-            and COMPUTATION_ZONE in json_input_file["network"].keys() \
-            and FILTER_SHAPE in json_input_file["network"][COMPUTATION_ZONE].keys():
-        filter_shape_file = json_input_file["network"][COMPUTATION_ZONE].pop(FILTER_SHAPE)
+    if "network" in json_input.keys() \
+            and COMPUTATION_ZONE in json_input["network"].keys() \
+            and FILTER_SHAPE in json_input["network"][COMPUTATION_ZONE].keys():
+        filter_shape_file = json_input["network"][COMPUTATION_ZONE].pop(FILTER_SHAPE)
         check_shapefile_archive(filter_shape_file, LOGGER)
         if filter_shape_file:
-            new_shapefile = (SHAPEFILE_ARCHIVE_PARAM,
-                             (os.path.basename(filter_shape_file), open(filter_shape_file, 'rb'), APPLICATION_ZIP))
+            new_shapefile = (
+                SHAPEFILE_ARCHIVE_PARAM,
+                os.path.basename(filter_shape_file),
+                filter_shape_file,
+                APPLICATION_ZIP
+            )
     return new_shapefile
 
 
@@ -849,22 +867,31 @@ def check_shapefile_archive(zip_path: str, logger: logging.Logger) -> None:
         mandatory_files = [f for f in zip_files
                            if f.endswith(mandatory_ext) and Path(f).stem == filter_shape_name]
         if len(mandatory_files) != len(SHAPE_FILE_EXT_MANDATORY):
-            logger.error("Error post processing shapefile archive: %s must contain at least %s files",
-                         zip_path, mandatory_ext)
+            logger.error(
+                "Error post processing shapefile archive: %s must contain at least %s files",
+                zip_path, mandatory_ext
+            )
             sys.exit(errno.EINVAL)
 
         # Get optional files composing the shapefile
         optional_ext = tuple(SHAPE_FILE_EXT_OPTIONAL)
-        optional_files = [f for f in zip_files
-                          if (f.endswith(optional_ext) and Path(f).stem == filter_shape_name)
-                          or (f.endswith(SHAPE_FILE_EXT_OPTIONAL_XML)
-                              and ''.join(f.rsplit(SHAPE_FILE_EXT_OPTIONAL_XML, 1)) == filter_shape_name)]
+        optional_files = [
+            f for f in zip_files
+            if (f.endswith(optional_ext) and Path(f).stem == filter_shape_name)
+                or (f.endswith(SHAPE_FILE_EXT_OPTIONAL_XML)
+                    and ''.join(f.rsplit(SHAPE_FILE_EXT_OPTIONAL_XML, 1)) == filter_shape_name)
+        ]
 
         # Check if archive contains other files than mandatory and optional files
-        unknown_files = [f for f in zip_files if f not in mandatory_files and f not in optional_files]
+        unknown_files = [
+            f for f in zip_files
+            if f not in mandatory_files and f not in optional_files
+        ]
         if unknown_files:
-            logger.error("Error post processing shapefile archive: must not contain the following files %s",
-                         unknown_files)
+            logger.error(
+                "Error post processing shapefile archive: must not contain the following files %s",
+                unknown_files
+            )
             sys.exit(errno.EINVAL)
 
 
@@ -934,7 +961,6 @@ def handle_pull_simulation_status_response(simulation_uuid: uuid.UUID,
 
 def download_simulation_results(output_path: str, file_name: str,
                                 download_kmz: bool, settings: dict,
-                                network_list: list,
                                 simulation_uuid: uuid.UUID,
                                 authentication_data: Optional[dict], server: str,
                                 download_server: str,
@@ -945,7 +971,6 @@ def download_simulation_results(output_path: str, file_name: str,
     @param file_name: {str} the file name
     @param download_kmz: {bool} indicates whether to download the results in KMZ format
     @param settings: {dict} dictionary of settings
-    @param network_list: {dict} list of network datas
     @param simulation_uuid: {uuid.UUID} uuid of the simulation
     @param authentication_data: {dict} authentication data
     @param server: {str} server url
@@ -982,8 +1007,11 @@ def download_simulation_results(output_path: str, file_name: str,
             name = split_name[0]
         final_folder_path = os.path.join(path, folder_path)
 
-        current_tiff = call_request("GET", f"{download_server}results/{str(result['uuid'])}/download",
-                                    authentication_data, logger)
+        current_tiff = call_request(
+            "GET",
+            f"{download_server}results/{str(result['uuid'])}/download",
+            authentication_data, logger
+        )
         if current_tiff.status_code != 200:
             logger.error("Error downloading %s", result["fileName"])
             sys.exit(errno.EINVAL)
@@ -1014,20 +1042,15 @@ def download_simulation_results(output_path: str, file_name: str,
                     else -65
                 current_kmz = call_request(
                     "GET",
-                    f"{download_server}results/{str(result['uuid'])}/download/kmz/{palette}/min/{min_value}/max/{max_value}",
+                    f"{download_server}results/{str(result['uuid'])}/download/kmz/{palette}"
+                    f"/min/{min_value}/max/{max_value}",
                     authentication_data,
                     logger
                 )
             else:
-                min_value=0
-                max_value=0
-                for network in network_list:
-                    min_value = min(int(get_from_dict(network, NetworkFields.TRANSMITTER_ID)), min_value)
-                    max_value = max(int(get_from_dict(network, NetworkFields.TRANSMITTER_ID)), max_value)
-
                 current_kmz = call_request(
                     "GET",
-                    f"{download_server}results/{str(result['uuid'])}/download/kmz/{palette}/min/{min_value}/max/{max_value}",
+                    f"{download_server}results/{str(result['uuid'])}/download/kmz/{palette}",
                     authentication_data,
                     logger
                 )
@@ -1117,8 +1140,11 @@ def download_simulation_predictions_results(simulation_uuid: uuid.UUID,
 
         for result in results:
             name = result["fileName"]
-            current_tiff = call_request("GET", f"{download_server}results/{str(result['uuid'])}/download",
-                                        authentication_data, logger)
+            current_tiff = call_request(
+                "GET",
+                f"{download_server}results/{str(result['uuid'])}/download",
+                authentication_data, logger
+            )
             if current_tiff.status_code != 200:
                 logger.error("Error downloading %s", name)
                 sys.exit(errno.EINVAL)
@@ -1189,19 +1215,23 @@ def fill_user_equipment(network: dict, session_uuid: uuid.UUID, data_dict: dict,
         user_equipment["heights"] = [get_from_dict(network, NetworkFields.RECEIVER_HEIGHT)]
         user_equipment["coordinates"] = {
             "x": get_float_from_dict(network, NetworkFields.RECEIVER_LONGITUDE)
-            if receiver_long_lat_coordinate else get_float_from_dict(network, NetworkFields.RECEIVER_EASTING),
+            if receiver_long_lat_coordinate
+            else get_float_from_dict(network, NetworkFields.RECEIVER_EASTING),
             "y": get_float_from_dict(network, NetworkFields.RECEIVER_LATITUDE)
-            if receiver_long_lat_coordinate else get_float_from_dict(network, NetworkFields.RECEIVER_NORTHING),
+            if receiver_long_lat_coordinate
+            else get_float_from_dict(network, NetworkFields.RECEIVER_NORTHING),
             "epsgCode": 4326 if transmitter_long_lat_coordinate else None
         }
 
         # check for receiver antenna
         if network.get(NetworkFields.RECEIVER_ANTENNA):
             user_equipment["antenna"] = get_from_dict(network, NetworkFields.RECEIVER_ANTENNA)
-            user_equipment["antennaUuid"] = get_resource_uuid_from_cache("Antenna", antenna_dict,
-                                                                         user_equipment["antenna"].lower(), logger)
-            user_equipment["azimuth"] = get_from_dict(network, NetworkFields.RECEIVER_AZIMUTH, "0")
-            user_equipment["downtilt"] = get_from_dict(network, NetworkFields.RECEIVER_DOWNTILT, "0")
+            user_equipment["antennaUuid"] = get_resource_uuid_from_cache(
+                "Antenna", antenna_dict, user_equipment["antenna"].lower(), logger)
+            user_equipment["azimuth"] = get_from_dict(
+                network, NetworkFields.RECEIVER_AZIMUTH, "0")
+            user_equipment["downtilt"] = get_from_dict(
+                network, NetworkFields.RECEIVER_DOWNTILT, "0")
     else:
         user_equipment["type"] = "AREA"
 
@@ -1221,9 +1251,11 @@ def fill_user_equipment(network: dict, session_uuid: uuid.UUID, data_dict: dict,
                 and data_dict["predictionSettings"]["shiftGridCenter"] is True:
             # Shift Grid Center of user equipement
             tx_x = get_float_from_dict(network, NetworkFields.TRANSMITTER_LONGITUDE) \
-                if transmitter_long_lat_coordinate else get_float_from_dict(network, NetworkFields.TRANSMITTER_EASTING)
+                if transmitter_long_lat_coordinate \
+                    else get_float_from_dict(network, NetworkFields.TRANSMITTER_EASTING)
             tx_y = get_float_from_dict(network, NetworkFields.TRANSMITTER_LATITUDE) \
-                if transmitter_long_lat_coordinate else get_float_from_dict(network, NetworkFields.TRANSMITTER_NORTHING)
+                if transmitter_long_lat_coordinate \
+                    else get_float_from_dict(network, NetworkFields.TRANSMITTER_NORTHING)
             # Define the center of the grid according to the resolution
             tx_x_grid = resolution * math.floor((tx_x + resolution / 2) / resolution)
             tx_y_grid = resolution * math.floor((tx_y + resolution / 2) / resolution)
@@ -1231,9 +1263,11 @@ def fill_user_equipment(network: dict, session_uuid: uuid.UUID, data_dict: dict,
         else:
             # default use case
             tx_x_grid = get_float_from_dict(network, NetworkFields.TRANSMITTER_LONGITUDE) \
-                if transmitter_long_lat_coordinate else get_float_from_dict(network, NetworkFields.TRANSMITTER_EASTING)
+                if transmitter_long_lat_coordinate \
+                    else get_float_from_dict(network, NetworkFields.TRANSMITTER_EASTING)
             tx_y_grid = get_float_from_dict(network, NetworkFields.TRANSMITTER_LATITUDE) \
-                if transmitter_long_lat_coordinate else get_float_from_dict(network, NetworkFields.TRANSMITTER_NORTHING)
+                if transmitter_long_lat_coordinate \
+                    else get_float_from_dict(network, NetworkFields.TRANSMITTER_NORTHING)
 
         calculation_radius = get_float_from_dict(network, NetworkFields.CALCULATION_RADIUS)
         if transmitter_long_lat_coordinate:
@@ -1307,7 +1341,8 @@ def is_same_base_station(base_station_1: dict, base_station_2: dict) -> bool:
 
 def create_simulation_request(simulation_uuid: uuid.UUID, network_list: list, settings: dict,
                               session_uuid: uuid.UUID, antenna_dict: dict, models: dict,
-                              authentication_data: Optional[dict], server: str, logger: logging.Logger) -> None:
+                              authentication_data: Optional[dict], server: str,
+                              logger: logging.Logger) -> None:
     """
     @summary: Create simulation request
     @param simulation_uuid: {uuid.UUID} simulation uuid
@@ -1342,10 +1377,19 @@ def create_simulation_request(simulation_uuid: uuid.UUID, network_list: list, se
     multipart_form_data = [(JSON_PARAM, (None, json.dumps(simulation_request), APPLICATION_JSON))]
     shapefile = create_shapefile(settings)
     if shapefile:
-        multipart_form_data.append(shapefile)
-
-    res = call_request("POST", get_resource_uri(server, "simulations", authentication_data),
-                       authentication_data, logger, files=multipart_form_data)
+        field_name, filename, filepath, mime = shapefile
+        # Open file to read shapefile content
+        with open(filepath, "rb") as f:
+            multipart_form_data.append((field_name, (filename, f, mime)))
+            res = call_request(
+                "POST",
+                get_resource_uri(server, "simulations", authentication_data),
+                authentication_data, logger, files=multipart_form_data)
+    else:
+        res = call_request(
+            "POST",
+            get_resource_uri(server, "simulations", authentication_data),
+            authentication_data, logger, files=multipart_form_data)
     result = res.json()
     if res.status_code not in (200, 201):
         logger.error("Error simulation %s", get_error_message(result))
@@ -1372,7 +1416,8 @@ def create_propagation_request(network_list: list, settings: dict, session_uuid:
         new_base_station = fill_base_station(network, get_computation_type(settings),
                                              session_uuid, antenna_dict, logger)
         # fill user equipment
-        new_user_equipment = fill_user_equipment(network, session_uuid, settings, antenna_dict, logger)
+        new_user_equipment = fill_user_equipment(
+            network, session_uuid, settings, antenna_dict, logger)
         # fill propagation model uuid
         model_name = get_from_dict(network, NetworkFields.PROPAGATION_MODEL)
         model_uuid = get_resource_uuid_from_cache("PropagationModel", models,
@@ -1387,9 +1432,8 @@ def create_propagation_request(network_list: list, settings: dict, session_uuid:
                     propagation["userEquipments"].append(new_user_equipment)
                     already_exist = True
                     break
-                else:
-                    logger.error("Cannot create point to multi points simulations")
-                    sys.exit(errno.EINVAL)
+                logger.error("Cannot create point to multi points simulations")
+                sys.exit(errno.EINVAL)
 
         if not already_exist:
             new_propagation = {
@@ -1434,23 +1478,25 @@ def call_request(method: str, url: str, authentication_data: Optional[dict], log
 
     headers = None
 
-    if authentication_data is not None and "required" in authentication_data.keys() and authentication_data["required"]:
+    if (authentication_data is not None
+            and "required" in authentication_data.keys()
+            and authentication_data["required"]):
         token = get_access_token(authentication_data, logger)
         headers = {"Authorization": f"Bearer {token}"}
 
     res = None
     if method.upper() == "POST":
         res = requests.post(url=url, files=files, json=json_content, params=params,
-                            timeout=timeout,  headers=headers, verify=False)
+                            timeout=timeout,  headers=headers)
     elif method.upper() == "PUT":
         res = requests.put(url=url, files=files, json=json_content, params=params,
-                           timeout=timeout,  headers=headers, verify=False)
+                           timeout=timeout,  headers=headers)
     elif method.upper() == "GET":
         res = requests.get(url=url, files=files, json=json_content, params=params,
-                           timeout=timeout,  headers=headers, verify=False)
+                           timeout=timeout,  headers=headers)
     elif method.upper() == "DELETE":
         res = requests.delete(url=url, files=files, json=json_content, params=params,
-                              timeout=timeout,  headers=headers, verify=False)
+                              timeout=timeout,  headers=headers)
     else:
         logger.error("Method name %S not implemented", method.upper())
         sys.exit(errno.EINVAL)
@@ -1485,7 +1531,8 @@ def get_access_token(authentication_data: Optional[dict], logger: logging.Logger
 
     response = requests.post(
         authentication_data["url"],
-        data=payload, verify=False
+        data=payload,
+        timeout=30
     )
 
     json_response = response.json()
@@ -1520,7 +1567,8 @@ def refresh_token(authentication_data: Optional[dict], logger: logging.Logger) -
 
     response = requests.post(
         authentication_data["url"],
-        data=payload, verify=False
+        data=payload,
+        timeout=30
     )
 
     json_response = response.json()
@@ -1569,15 +1617,18 @@ if __name__ == "__main__":
     if 'authentication' in json_input_file.keys():
         AUTHENTICATION = json_input_file["authentication"]
 
-    new_network_list = create_network_list(json_input_file["predictionSettings"]["networkFile"], LOGGER)
+    new_network_list = create_network_list(
+        json_input_file["predictionSettings"]["networkFile"], LOGGER)
 
     # Functions call
     if "antennas" in json_input_file:
-        ANTENNA_MAP = create_antennas(json_input_file["antennas"], AUTHENTICATION, server_url, LOGGER)
+        ANTENNA_MAP = create_antennas(
+            json_input_file["antennas"], AUTHENTICATION, server_url, LOGGER)
     ANTENNA_MAP = add_public_antennas(ANTENNA_MAP, AUTHENTICATION, server_url, LOGGER)
 
     if get_computation_type(json_input_file) == SINR5G and "gob" in json_input_file.keys():
-        gob_dict = create_gobs(json_input_file["gob"], ANTENNA_MAP, AUTHENTICATION, server_url, LOGGER)
+        gob_dict = create_gobs(
+            json_input_file["gob"], ANTENNA_MAP, AUTHENTICATION, server_url, LOGGER)
         ANTENNA_MAP = {**ANTENNA_MAP, **gob_dict}
 
     create_session(json_input_file["session"], SESSION_UUID, AUTHENTICATION, server_url, LOGGER)
@@ -1606,7 +1657,7 @@ if __name__ == "__main__":
 
     download_simulation_results(output_directory_path, new_file_name,
                                 arguments.downloadKmz, json_input_file,
-                                new_network_list, SIMULATION_UUID, AUTHENTICATION,
+                                SIMULATION_UUID, AUTHENTICATION,
                                 server_url, download_url, LOGGER)
 
     end_simulation_execution_time = time.time()
@@ -1614,7 +1665,8 @@ if __name__ == "__main__":
     # Download prediction results if -p argument is present
     if arguments.downloadPrediction:
         download_simulation_predictions_results(
-            SIMULATION_UUID, output_directory_path, new_file_name, AUTHENTICATION, server_url, download_url, LOGGER)
+            SIMULATION_UUID, output_directory_path,
+            new_file_name, AUTHENTICATION, server_url, download_url, LOGGER)
 
     end_prediction_download_time = time.time()
 
@@ -1638,4 +1690,3 @@ if __name__ == "__main__":
         delete_scenarii_dir(AUTHENTICATION, server_url, LOGGER)
 
     LOGGER.info("Total execution time: %.2f seconds", (time.time() - start_execution_time))
-
