@@ -1,4 +1,5 @@
 "transmitter name";"transmitter longitude";"transmitter latitude";"transmitter height";"azimuth";"downtilt";"frequency";"emitting power"
 "Site1";-122.294;47.05289;25;0;0;900;50
-"Site1_2";-122.294;47.05289;25;120;0;900;50
-"Site1_3";-122.294;47.05289;25;240;0;900;50
+"Site2";-122.256889;47.016078;25;0;0;900;50
+"Site3";-122.241268;48.238852;25;0;0;900;50
+"Site4";-122.216034;48.210145;25;0;0;900;50
