@@ -151,21 +151,6 @@ SHAPE_FILE_EXT_OPTIONAL = [".prj", ".sbn", ".sbx", ".fbn", ".fbx", ".ain", ".aih
                            ".mxs", ".atx", ".cpg", ".qix", ".qmd"]
 SHAPE_FILE_EXT_OPTIONAL_XML = ".shp.xml"
 
-FIXED_WIRELESS_ACCESS = "fixed wireless access"
-MOBILITY = "mobility"
-PUBLIC_MODELS_NAME = [FIXED_WIRELESS_ACCESS, MOBILITY]
-
-TARANA_BN_3GHZ_COMPACT_R0 = "tarana-bn-3ghz-compact-r0"
-TARANA_BN_5GHZ_R1 = "tarana-bn-5ghz-r1"
-TARANA_BN_6GHZ_R2 = "tarana-bn-6ghz-r2"
-TARANA_BN_6GHZ_X2_R2 = "tarana-bn-6ghz-x2-r2"
-PUBLIC_ANTENNAS_NAME = [
-    TARANA_BN_3GHZ_COMPACT_R0,
-    TARANA_BN_5GHZ_R1,
-    TARANA_BN_6GHZ_R2,
-    TARANA_BN_6GHZ_X2_R2
-]
-
 SESSION_UUID = uuid.uuid4()
 SIMULATION_UUID = uuid.uuid4()
 ANTENNA_MAP = {}
@@ -364,11 +349,12 @@ def get_resource_uuid_from_cache(resource_type: str, resource_cache: dict, resou
     return resource_uuid
 
 
-def create_antennas(antenna_list: list, authentication_data: Optional[dict], server: str,
-                    logger: logging.Logger) -> dict:
+def create_antennas(antenna_dict: dict, antenna_list: list, authentication_data: Optional[dict],
+                    server: str, logger: logging.Logger) -> dict:
     """
     @summary: Create antennas from list
-    @param antenna_list: {list} list of antenna
+    @param antenna_dict: {dict} initial antenna dictionary
+    @param antenna_list: {list} list of antenna to create
     @param authentication_data: {dict} authentication data
     @param server: {str} server url
     @param logger: {logging.Logger} used to trace output log
@@ -377,9 +363,8 @@ def create_antennas(antenna_list: list, authentication_data: Optional[dict], ser
     logger.info("Creation antenna")
 
     # Validate antennas
-    validate_antennas(antenna_list, logger)
+    validate_antennas(antenna_dict, antenna_list, logger)
 
-    antenna_dict = {}
     for antenna in antenna_list:
         if "uuid" in antenna and antenna["uuid"]:
             # If antenna already created (with uuid), add it to the antenna dictionary
@@ -409,39 +394,38 @@ def create_antennas(antenna_list: list, authentication_data: Optional[dict], ser
     return antenna_dict
 
 
-def add_public_antennas(antenna_dict: dict, authentication_data: Optional[dict],
+def add_existing_antennas(authentication_data: Optional[dict],
                       server: str, logger: logging.Logger) -> dict:
     """
-    @summary: Add public antennas to antenna dictionary
-    @param antenna_dict: {dict} initial antenna dictionary
+    @summary: Add existing antennas to antenna dictionary
     @param authentication_data: {dict} authentication data
     @param server: {str} server url
     @param logger: {logging.Logger} used to trace output log
-    @return antenna_dict: {dict} dict of antennas with public antennas
+    @return antenna_dict: {dict} dict of antennas with existing antennas
     """
-    logger.info("Add public antennas")
-    public_antennas_list = call_request("GET", f"{server}antennas",
+    logger.info("Add existing antennas")
+    antenna_dict = {}
+    existing_antennas_list = call_request("GET", f"{server}antennas",
                                       authentication_data, logger).json()
-    public_antennas = [antenna for antenna in public_antennas_list
-                     if antenna[NAME].lower() in PUBLIC_ANTENNAS_NAME]
 
-    for public_antenna in public_antennas:
-        antenna_dict[public_antenna[NAME].lower()] = public_antenna["uuid"]
+    for existing_antenna in existing_antennas_list:
+        antenna_dict[existing_antenna[NAME].lower()] = existing_antenna["uuid"]
     return antenna_dict
 
 
-def validate_antennas(antenna_list: list, logger: logging.Logger) -> None:
+def validate_antennas(antenna_dict: dict, antenna_list: list, logger: logging.Logger) -> None:
     """
     @summary: Validate antennas from list
-    @param antenna_list: {list} list of antenna
+    @param antenna_dict: {dict} initial antenna dictionary
+    @param antenna_list: {list} list of antenna to validate
     @param logger: {logging.Logger} used to trace output log
     """
     antenna_validated: Union[list, dict] = {}
     for antenna in antenna_list:
-        if antenna[NAME].lower() in PUBLIC_ANTENNAS_NAME:
+        if antenna[NAME].lower() in antenna_dict:
             logger.error(
-                "The antenna %s cannot take the name of one of the public antennas %s.",
-                antenna[NAME], PUBLIC_ANTENNAS_NAME
+                "The antenna %s cannot take the name of one of the existing antennas %s.",
+                antenna[NAME], repr(list(antenna_dict.keys()))
             )
             sys.exit(errno.EINVAL)
         if antenna[NAME] in antenna_validated \
@@ -457,7 +441,7 @@ def create_gobs(gob_list: list, antenna_dict: dict, authentication_data: Optiona
                 server: str, logger: logging.Logger) -> dict:
     """
     @summary: Create gobs from list
-    @param gob_list: {list} list of gob
+    @param gob_list: {list} list of gob to create
     @param antenna_dict: {dict} dict of antenna for name to uuid mapping
     @param authentication_data: {dict} authentication data
     @param server: {str} server url
@@ -467,7 +451,7 @@ def create_gobs(gob_list: list, antenna_dict: dict, authentication_data: Optiona
     logger.info("Creation gob")
 
     # Validate antennas
-    validate_antennas(gob_list, logger)
+    validate_antennas(antenna_dict, gob_list, logger)
 
     created_gob_dict = {}
     for gob in gob_list:
@@ -616,11 +600,12 @@ def fill_base_station(network: dict, computation_type: str, session_uuid: uuid.U
     return base_station
 
 
-def create_model(model_list: list, session_uuid: uuid.UUID,
+def create_model(model_dict: dict, model_list: list, session_uuid: uuid.UUID,
                  authentication_data: Optional[dict], server: str, logger: logging.Logger) -> dict:
     """
     @summary: Create a model
-    @param model_list: {list} list of model
+    @param model_dict: {dict} initial model dictionary
+    @param model_list: {list} list of model to create
     @param session_uuid: {uuid.UUID} uuid of the current session
     @param authentication_data: {dict} authentication data
     @param server: {str} server url
@@ -628,12 +613,12 @@ def create_model(model_list: list, session_uuid: uuid.UUID,
     @return model_dict: {dict} dict of propagation models
     """
     logger.info("Creation model")
-    model_dict = {}
+
     for model in model_list:
-        if model[NAME].lower() in PUBLIC_MODELS_NAME:
+        if model[NAME].lower() in model_dict:
             logger.error(
-                "The model %s cannot take the name of one of the public models %s.",
-                model[NAME], PUBLIC_MODELS_NAME
+                "The model %s cannot take the name of one of the existing models %s.",
+                model[NAME], repr(list(model_dict.keys()))
             )
             sys.exit(errno.EINVAL)
         if "uuid" in model and model["uuid"]:
@@ -674,24 +659,22 @@ def create_model(model_list: list, session_uuid: uuid.UUID,
     return model_dict
 
 
-def add_public_models(model_dict: dict, authentication_data: Optional[dict],
+def add_existing_models(authentication_data: Optional[dict],
                       server: str, logger: logging.Logger) -> dict:
     """
-    @summary: Add public models to model dictionary
-    @param model_dict: {dict} initial model dictionary
+    @summary: Add existing models to model dictionary
     @param authentication_data: {dict} authentication data
     @param server: {str} server url
     @param logger: {logging.Logger} used to trace output log
-    @return model_dict: {dict} dict of propagation models with public models
+    @return model_dict: {dict} dict of propagation models with existing models
     """
-    logger.info("Add public models")
-    public_models_list = call_request("GET", f"{server}propagationmodels",
-                                      authentication_data, logger).json()
-    public_models = [model for model in public_models_list
-                     if model["name"].lower() in PUBLIC_MODELS_NAME and model["type"] is None]
+    logger.info("Add existing models")
+    model_dict = {}
+    existing_models_list = call_request("GET", f"{server}propagationmodels",
+                                       authentication_data, logger).json()
 
-    for public_model in public_models:
-        model_dict[public_model[NAME].lower()] = public_model["uuid"]
+    for existing_model in existing_models_list:
+        model_dict[existing_model[NAME].lower()] = existing_model["uuid"]
     return model_dict
 
 
@@ -1642,10 +1625,10 @@ if __name__ == "__main__":
         json_input_file["predictionSettings"]["networkFile"], LOGGER)
 
     # Functions call
+    ANTENNA_MAP = add_existing_antennas(AUTHENTICATION, server_url, LOGGER)
     if "antennas" in json_input_file:
         ANTENNA_MAP = create_antennas(
-            json_input_file["antennas"], AUTHENTICATION, server_url, LOGGER)
-    ANTENNA_MAP = add_public_antennas(ANTENNA_MAP, AUTHENTICATION, server_url, LOGGER)
+            ANTENNA_MAP, json_input_file["antennas"], AUTHENTICATION, server_url, LOGGER)
 
     if get_computation_type(json_input_file) == SINR5G and "gob" in json_input_file.keys():
         gob_dict = create_gobs(
@@ -1654,10 +1637,10 @@ if __name__ == "__main__":
 
     create_session(json_input_file["session"], SESSION_UUID, AUTHENTICATION, server_url, LOGGER)
 
+    MODEL_MAP = add_existing_models(AUTHENTICATION, server_url, LOGGER)
     if "models" in json_input_file:
-        MODEL_MAP = create_model(json_input_file["models"], SESSION_UUID,
+        MODEL_MAP = create_model(MODEL_MAP, json_input_file["models"], SESSION_UUID,
                                  AUTHENTICATION, server_url, LOGGER)
-    MODEL_MAP = add_public_models(MODEL_MAP, AUTHENTICATION, server_url, LOGGER)
 
     # output Path : sessionName/date/networkFileName
     output_directory_path = json_input_file["outputPath"] \
